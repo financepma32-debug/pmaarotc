@@ -37,26 +37,27 @@ html, body, [class*="css"] { font-family:'Inter',sans-serif; }
 .pma-header {
     background: linear-gradient(120deg, #C8192E 0%, #8C0A1C 100%);
     border-radius: 10px;
-    padding: 16px 24px;
+    padding: 14px 22px;
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 16px;
     margin-bottom: 14px;
     box-shadow: 0 4px 14px rgba(180,15,40,.28);
-    overflow: hidden;
     box-sizing: border-box;
+    width: 100%;
 }
-.pma-hl { min-width:0; flex:1; overflow:hidden; }
+.pma-hl { flex:1; min-width:0; }
 .pma-title {
-    color:#fff; font-size:19px; font-weight:700; margin:0;
-    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    color:#fff; font-size:18px; font-weight:700; margin:0;
+    line-height:1.3; white-space:normal; word-break:break-word;
 }
-.pma-sub { color:rgba(255,255,255,.70); font-size:11.5px; margin:3px 0 0; white-space:nowrap; }
+.pma-sub { color:rgba(255,255,255,.68); font-size:11px; margin:3px 0 0; }
 .pma-date {
-    color:#fff; font-size:12.5px; font-weight:600;
+    color:#fff; font-size:12px; font-weight:600;
     background:rgba(255,255,255,.18); border-radius:6px;
     padding:6px 14px; font-family:'IBM Plex Mono',monospace;
-    white-space:nowrap; flex-shrink:0; margin-left:16px;
+    white-space:nowrap; flex-shrink:0;
 }
 
 /* ════ UPDATE BAR ════ */
@@ -252,6 +253,13 @@ def plot_base(fig, h=300, margin=None):
 
 def sec(t): st.markdown(f"<p class='sec'>{t}</p>", unsafe_allow_html=True)
 
+def dl_btn(df_export, filename, label="⬇️ Download CSV"):
+    """Tombol download CSV kecil, konsisten di semua section."""
+    csv = df_export.to_csv(index=False, sep=";", encoding="utf-8-sig").encode("utf-8-sig")
+    st.download_button(label, data=csv,
+                       file_name=f"{filename}_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+                       mime="text/csv", use_container_width=True)
+
 def kpi(co, label, val, sub="", cls=""):
     with co:
         st.markdown(
@@ -273,7 +281,7 @@ def main():
     <div class="pma-header">
       <div class="pma-hl">
         <p class="pma-title">AR Outstanding MT — MTI NKA</p>
-        <p class="pma-sub">PT Pinus Merah Abadi &nbsp;·&nbsp; FAD Team &nbsp;·&nbsp; Data via Supabase</p>
+        <p class="pma-sub">PT Pinus Merah Abadi &nbsp;·&nbsp; FAD Team</p>
       </div>
       <span class="pma-date">{datetime.now().strftime('%d %b %Y')}</span>
     </div>
@@ -414,6 +422,13 @@ def main():
     so_tbl(cs,"SOFT BLOCK",     "🔶 Soft Block")
     so_tbl(cc,"CRITICAL BLOCK", "🔴 Critical Block")
 
+    # Download SO Block lengkap
+    df_so_dl = df_ov[["NAMA AREA","RBM","ASM","No Faktur","NAMA TOKO",
+                       "NOMINAL","KELOMPOK","SO_KAT","OVERDUE?"]].copy()
+    df_so_dl.columns = ["Nama Area","RBM","ASM","No Faktur","Nama Toko",
+                        "Nominal","Kelompok","SO Kategori","Hari OD"]
+    dl_btn(df_so_dl, "SO_BLOCK_DETAIL", "⬇️ Download SO Block Detail (semua kategori)")
+
     # Stacked bar SO Block per area — warna cerah
     sec("DISTRIBUSI SO BLOCK PER NAMA AREA")
     pivot = (df_ov.groupby(["NAMA AREA","SO_KAT"])["NOMINAL"]
@@ -421,7 +436,7 @@ def main():
     for k in ["WARNING SO","SOFT BLOCK","CRITICAL BLOCK"]:
         if k not in pivot.columns: pivot[k]=0
     pivot["TOTAL"] = pivot[["WARNING SO","SOFT BLOCK","CRITICAL BLOCK"]].sum(axis=1)
-    pivot = pivot.nlargest(20,"TOTAL")
+    pivot = pivot.nlargest(10,"TOTAL")
 
     fig_so = go.Figure()
     so_cfg = [
@@ -514,6 +529,21 @@ def main():
         t_kat.columns = ["Kategori Overdue","Nominal","Jml Faktur","%"]
         st.dataframe(t_kat, use_container_width=True, hide_index=True, height=340)
 
+    # Download: per area & per kategori
+    dw1, dw2 = st.columns(2)
+    with dw1:
+        t_area_dl = (dff.groupby("NAMA AREA")
+                     .agg(NF=("Nilai Faktur","sum"),Cur=("CURRENT","sum"),Ov=("OVERDUE","sum"))
+                     .reset_index().sort_values("NF",ascending=False))
+        t_area_dl.columns = ["Nama Area","Nilai Faktur","Current","Overdue"]
+        dl_btn(t_area_dl, "OUTSTANDING_PER_AREA")
+    with dw2:
+        t_kat_dl = (dff[dff["NOMINAL"]>0].groupby("KATEGORI OVERDUE")
+                    .agg(Nominal=("NOMINAL","sum"),Faktur=("No Faktur","count"))
+                    .reset_index().sort_values("Nominal",ascending=False))
+        t_kat_dl.columns = ["Kategori Overdue","Nominal","Jml Faktur"]
+        dl_btn(t_kat_dl, "OUTSTANDING_PER_KATEGORI")
+
     # ════════════════════════════════════════════════════════════════
     # COLLECTION
     # ════════════════════════════════════════════════════════════════
@@ -559,6 +589,24 @@ def main():
         t_asm.columns = ["ASM","Actual","Target","Outstanding","% Coll"]
         st.dataframe(t_asm, use_container_width=True, hide_index=True, height=340)
 
+    # Download collection
+    dc1, dc2 = st.columns(2)
+    with dc1:
+        t_coll_dl = (dff.groupby("NAMA AREA")
+                     .agg(Actual=("ACTUAL PELUNASAN","sum"),Target=("TARGET PELUNASAN","sum"))
+                     .reset_index())
+        t_coll_dl["%Coll"] = t_coll_dl.apply(lambda r: P(r["Actual"],r["Target"]),axis=1)
+        t_coll_dl.columns = ["Nama Area","Actual Pelunasan","Target Pelunasan","% Collection"]
+        dl_btn(t_coll_dl, "COLLECTION_PER_AREA")
+    with dc2:
+        t_asm_dl = (dff.groupby("ASM")
+                    .agg(Actual=("ACTUAL PELUNASAN","sum"),Target=("TARGET PELUNASAN","sum"),
+                         OS=("NOMINAL","sum"))
+                    .reset_index())
+        t_asm_dl["%Coll"] = t_asm_dl.apply(lambda r: P(r["Actual"],r["Target"]),axis=1)
+        t_asm_dl.columns = ["ASM","Actual","Target","Outstanding","% Coll"]
+        dl_btn(t_asm_dl, "COLLECTION_PER_ASM")
+
     # ════════════════════════════════════════════════════════════════
     # BREAKDOWN OUTLET & RBM
     # ════════════════════════════════════════════════════════════════
@@ -584,6 +632,25 @@ def main():
         for c in ["OS","OV","Akt","Tgt"]: t_rbm[c]=t_rbm[c].apply(M)
         t_rbm.columns = ["RBM","Outstanding","Overdue","Actual Pel.","Target Pel.","%OD","%Coll"]
         st.dataframe(t_rbm, use_container_width=True, hide_index=True, height=340)
+
+    # Download outlet & RBM
+    do1, do2 = st.columns(2)
+    with do1:
+        t_out_dl = (dff.groupby("JENIS OUTLET")
+                    .agg(OS=("NOMINAL","sum"),OV=("OVERDUE","sum"))
+                    .reset_index().sort_values("OS",ascending=False))
+        t_out_dl["%OD"] = t_out_dl.apply(lambda r: P(r["OV"],r["OS"]),axis=1)
+        t_out_dl.columns = ["Jenis Outlet","Outstanding","Overdue","%OD"]
+        dl_btn(t_out_dl, "BREAKDOWN_OUTLET")
+    with do2:
+        t_rbm_dl = (dff.groupby("RBM")
+                    .agg(OS=("NOMINAL","sum"),OV=("OVERDUE","sum"),
+                         Akt=("ACTUAL PELUNASAN","sum"),Tgt=("TARGET PELUNASAN","sum"))
+                    .reset_index())
+        t_rbm_dl["%OD"]   = t_rbm_dl.apply(lambda r: P(r["OV"],r["OS"]),axis=1)
+        t_rbm_dl["%Coll"] = t_rbm_dl.apply(lambda r: P(r["Akt"],r["Tgt"]),axis=1)
+        t_rbm_dl.columns = ["RBM","Outstanding","Overdue","Actual Pel.","Target Pel.","%OD","%Coll"]
+        dl_btn(t_rbm_dl, "BREAKDOWN_RBM")
 
     # ════════════════════════════════════════════════════════════════
     # DETAIL FAKTUR
