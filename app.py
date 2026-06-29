@@ -1,211 +1,131 @@
 """
 AR OTC Dashboard — Outstanding MT MTI NKA
 PT Pinus Merah Abadi | FAD Team
-Palet: Merah PMA #B01C2E + Off-white #FAF7F5 + Abu struktural #2B2B2B / #6B6B6B
+Palet: Nude tegas — Warm Stone #E8E0D8, Charcoal #2C2C2C, Merah PMA #A8192E
 """
 
 import streamlit as st
 import pandas as pd
-import plotly.express as px
 import plotly.graph_objects as go
-from supabase import create_client, Client
+from supabase import create_client
 from datetime import datetime
 
 st.set_page_config(
-    page_title="AR OTC · MTI NKA · PMA",
+    page_title="AR OTC — Outstanding MT MTI NKA | PMA",
     page_icon="🔴",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-# ── DESIGN TOKENS — PMA Brand ────────────────────────────────────────────────
-# Merah PMA dari logo: pekat, bukan merah terang
-# Off-white "tissue": #FAF7F5 — warm, tidak krem, tidak putih dingin
-# Aksent abu gelap untuk teks dan border: terkesan laporan, bukan playful
+# ════════════════════════════════════════════════════════════════════
+# DESIGN SYSTEM — Nude Tegas
+# Background  : #F0EBE3  warm stone, bukan putih, bukan krem pastel
+# Surface     : #FFFFFF  kartu
+# Merah PMA   : #A8192E  dari logo, lebih tua dari crimson
+# Charcoal    : #2C2C2C  teks utama
+# Stone mid   : #8C7B72  label, caption
+# Border      : #D9D0C7  garis pemisah
+# WARNING SO  : #B8860B  dark goldenrod — serius tapi bukan merah
+# SOFT BLOCK  : #C05000  burnt orange — tahap kedua
+# CRITICAL    : #A8192E  merah PMA penuh — bahaya
+# ════════════════════════════════════════════════════════════════════
 
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
-/* ── Reset & base ── */
-html, body, [class*="css"]  { font-family: 'Inter', sans-serif; }
-[data-testid="stAppViewContainer"] {
-    background: #FAF7F5;
-}
-[data-testid="stSidebar"] {
-    background: #FFFFFF;
-    border-right: 1px solid #E8E3E0;
-}
-[data-testid="stSidebar"] * { font-size: 13px; }
-.block-container {
-    padding: 1.2rem 2rem 2rem;
-    max-width: 1400px;
-}
+html, body, [class*="css"] { font-family:'Inter',sans-serif; }
 
-/* ── Header strip merah PMA ── */
+[data-testid="stAppViewContainer"] { background:#F0EBE3; }
+[data-testid="stSidebar"]          { background:#FAF8F5; border-right:1px solid #D9D0C7; }
+[data-testid="stSidebar"] *        { font-size:13px; color:#2C2C2C; }
+.block-container { padding:1rem 1.8rem 2rem; max-width:1440px; }
+
+/* ── HEADER ── */
 .pma-header {
-    background: #B01C2E;
-    border-radius: 10px;
-    padding: 16px 24px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 20px;
-}
-.pma-header-title {
-    color: #FFFFFF;
-    font-size: 20px;
-    font-weight: 700;
-    letter-spacing: -0.3px;
-    margin: 0;
-}
-.pma-header-sub {
-    color: rgba(255,255,255,0.70);
-    font-size: 12px;
-    margin: 3px 0 0;
-    font-weight: 400;
-}
-.pma-header-date {
-    color: #FFFFFF;
-    font-size: 13px;
-    font-weight: 600;
-    background: rgba(255,255,255,0.15);
-    border-radius: 6px;
-    padding: 6px 14px;
-    font-family: 'DM Mono', monospace;
-}
-
-/* ── KPI cards ── */
-.kpi-card {
-    background: #FFFFFF;
+    background: #A8192E;
     border-radius: 8px;
-    padding: 16px 14px 14px;
-    border-left: 4px solid #B01C2E;
-    box-shadow: 0 1px 3px rgba(0,0,0,.06);
-    height: 88px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
+    padding: 14px 22px;
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 8px rgba(168,25,46,.25);
 }
-.kpi-card.secondary { border-left-color: #D0C8C5; }
-.kpi-card.green     { border-left-color: #1A7F4B; }
-.kpi-card.warning   { border-left-color: #C4640A; }
-.kpi-card.dark      { border-left-color: #2B2B2B; }
-.kpi-label {
-    font-size: 10px;
-    font-weight: 600;
-    color: #9A8F8C;
-    text-transform: uppercase;
-    letter-spacing: .8px;
-    margin: 0;
-}
-.kpi-value {
-    font-size: 22px;
-    font-weight: 700;
-    color: #1A1A1A;
-    font-family: 'DM Mono', monospace;
-    margin: 0;
-    line-height: 1;
-}
-.kpi-sub {
-    font-size: 10px;
-    color: #B0A8A5;
-    margin: 0;
+.pma-title { color:#fff; font-size:18px; font-weight:700; margin:0; letter-spacing:-.2px; white-space:nowrap; }
+.pma-sub   { color:rgba(255,255,255,.65); font-size:11px; margin:2px 0 0; }
+.pma-date  {
+    color:#fff; font-size:12px; font-weight:600;
+    background:rgba(255,255,255,.18); border-radius:5px;
+    padding:5px 12px; font-family:'IBM Plex Mono',monospace;
+    white-space:nowrap; flex-shrink:0;
 }
 
-/* ── Bucket aging strip ── */
-.bucket-strip {
-    display: flex;
-    gap: 6px;
-    margin: 4px 0 18px;
-}
-.bucket-cell {
-    flex: 1;
-    background: #FFFFFF;
-    border-radius: 6px;
-    padding: 10px 8px;
-    text-align: center;
-    border-top: 3px solid #ddd;
-    box-shadow: 0 1px 3px rgba(0,0,0,.05);
-}
-.bucket-cell-label {
-    font-size: 9px;
-    font-weight: 700;
-    color: #9A8F8C;
-    text-transform: uppercase;
-    letter-spacing: .5px;
-    margin: 0;
-}
-.bucket-cell-val {
-    font-size: 13px;
-    font-weight: 700;
-    color: #1A1A1A;
-    font-family: 'DM Mono', monospace;
-    margin: 4px 0 0;
-    line-height: 1;
+/* ── UPDATE BAR ── */
+.upd-bar {
+    background:#EDE6DD; border-radius:6px; padding:7px 14px;
+    font-size:11px; color:#6B5E57;
+    display:flex; justify-content:space-between; margin-bottom:16px;
 }
 
-/* ── Section title ── */
-.sec-title {
-    font-size: 11px;
-    font-weight: 700;
-    color: #B01C2E;
-    text-transform: uppercase;
-    letter-spacing: 1.2px;
-    margin: 20px 0 8px;
-    padding-bottom: 6px;
-    border-bottom: 1px solid #E8E3E0;
+/* ── KPI CARD ── */
+.kpi {
+    background:#fff; border-radius:7px;
+    padding:14px 12px 12px;
+    border-left:4px solid #A8192E;
+    box-shadow:0 1px 3px rgba(0,0,0,.06);
+    min-height:82px;
 }
+.kpi.green  { border-left-color:#1A6B3C; }
+.kpi.gold   { border-left-color:#B8860B; }
+.kpi.orange { border-left-color:#C05000; }
+.kpi.stone  { border-left-color:#8C7B72; }
+.kpi-lbl { font-size:9.5px; font-weight:700; color:#8C7B72; text-transform:uppercase; letter-spacing:.9px; margin:0; }
+.kpi-val { font-size:21px; font-weight:700; color:#2C2C2C; font-family:'IBM Plex Mono',monospace; margin:5px 0 2px; line-height:1; }
+.kpi-sub { font-size:10px; color:#A8998F; margin:0; }
 
-/* ── Alert badge ── */
-.badge-red {
-    display: inline-block;
-    background: #B01C2E;
-    color: #fff;
-    font-size: 10px;
-    font-weight: 700;
-    border-radius: 4px;
-    padding: 2px 7px;
-    margin-left: 6px;
-    vertical-align: middle;
+/* ── BUCKET STRIP ── */
+.bk-strip { display:flex; gap:5px; margin-bottom:18px; }
+.bk-cell  {
+    flex:1; background:#fff; border-radius:6px;
+    padding:9px 6px; text-align:center;
+    border-top:3px solid #D9D0C7;
+    box-shadow:0 1px 2px rgba(0,0,0,.05);
 }
-.badge-green {
-    display: inline-block;
-    background: #1A7F4B;
-    color: #fff;
-    font-size: 10px;
-    font-weight: 700;
-    border-radius: 4px;
-    padding: 2px 7px;
-    margin-left: 6px;
-    vertical-align: middle;
-}
+.bk-lbl { font-size:8.5px; font-weight:700; color:#8C7B72; text-transform:uppercase; letter-spacing:.4px; margin:0; }
+.bk-val { font-size:12px; font-weight:700; color:#2C2C2C; font-family:'IBM Plex Mono',monospace; margin:3px 0 0; }
 
-/* ── Tabel Streamlit override ── */
+/* ── SO BLOCK CARDS ── */
+.so-wrap { display:flex; gap:10px; margin-bottom:4px; }
+.so-card {
+    flex:1; border-radius:8px; padding:16px 16px 14px;
+    box-shadow:0 2px 6px rgba(0,0,0,.08);
+}
+.so-warn  { background:#FEF7E6; border-left:5px solid #B8860B; }
+.so-soft  { background:#FDF0E8; border-left:5px solid #C05000; }
+.so-crit  { background:#FBE8EB; border-left:5px solid #A8192E; }
+.so-badge {
+    display:inline-block; font-size:9px; font-weight:700;
+    border-radius:3px; padding:2px 7px; letter-spacing:.6px;
+    text-transform:uppercase; margin-bottom:6px;
+}
+.so-badge.warn { background:#B8860B; color:#fff; }
+.so-badge.soft { background:#C05000; color:#fff; }
+.so-badge.crit { background:#A8192E; color:#fff; }
+.so-val  { font-size:26px; font-weight:700; font-family:'IBM Plex Mono',monospace; color:#2C2C2C; margin:0; line-height:1; }
+.so-sub  { font-size:11px; color:#6B5E57; margin:4px 0 0; }
+.so-desc { font-size:10px; color:#8C7B72; margin:6px 0 0; font-style:italic; }
+
+/* ── SECTION TITLE ── */
+.sec { font-size:10.5px; font-weight:700; color:#A8192E; text-transform:uppercase;
+       letter-spacing:1.2px; margin:20px 0 8px;
+       padding-bottom:5px; border-bottom:1px solid #D9D0C7; }
+
+/* ── TABLE override ── */
 [data-testid="stDataFrame"] thead th {
-    background: #F2EDEA !important;
-    color: #2B2B2B !important;
-    font-size: 11px !important;
-    font-weight: 700 !important;
-    text-transform: uppercase !important;
-    letter-spacing: .5px !important;
+    background:#EDE6DD !important; color:#2C2C2C !important;
+    font-size:11px !important; font-weight:700 !important;
+    text-transform:uppercase !important; letter-spacing:.4px !important;
 }
-[data-testid="stDataFrame"] tbody td {
-    font-size: 12px !important;
-    color: #3A3A3A !important;
-}
-
-/* ── Last updated bar ── */
-.update-bar {
-    background: #F2EDEA;
-    border-radius: 6px;
-    padding: 7px 14px;
-    font-size: 11px;
-    color: #6B6060;
-    margin-bottom: 18px;
-    display: flex;
-    justify-content: space-between;
-}
+[data-testid="stDataFrame"] tbody td { font-size:12px !important; color:#3A3A3A !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -236,29 +156,36 @@ DATE_COLS = {
 }
 BUCKETS = ["CURRENT","1-7 DAYS","8-30 DAYS","31-60 DAYS",
            "61-90 DAYS","91-120 DAYS","121+ DAYS","<2026"]
+BUCKET_COLOR = {
+    "CURRENT":    "#1A6B3C",
+    "1-7 DAYS":   "#B8860B",
+    "8-30 DAYS":  "#B8860B",
+    "31-60 DAYS": "#C05000",
+    "61-90 DAYS": "#C05000",
+    "91-120 DAYS":"#A8192E",
+    "121+ DAYS":  "#7A0E1E",
+    "<2026":      "#8C7B72",
+}
 
-# Warna bucket — gradasi dari hijau ke merah PMA, diakhiri abu untuk <2026
-BUCKET_BORDER = {
-    "CURRENT":    "#1A7F4B",
-    "1-7 DAYS":   "#3DAB6E",
-    "8-30 DAYS":  "#C4640A",
-    "31-60 DAYS": "#D4870A",
-    "61-90 DAYS": "#B01C2E",
-    "91-120 DAYS":"#8A0E1E",
-    "121+ DAYS":  "#5C0813",
-    "<2026":      "#6B6B6B",
+# SO Block mapping
+SO_MAP = {
+    "1-7 DAYS":   "WARNING SO",
+    "8-30 DAYS":  "WARNING SO",
+    "31-60 DAYS": "SOFT BLOCK",
+    "61-90 DAYS": "SOFT BLOCK",
+    "91-120 DAYS":"CRITICAL BLOCK",
+    "121+ DAYS":  "CRITICAL BLOCK",
+    "<2026":      "CRITICAL BLOCK",
 }
 
 # ── FORMAT ───────────────────────────────────────────────────────────────────
 def M(v):
-    """Format angka besar ke Miliar/Juta/plain"""
     v = float(v)
     if abs(v) >= 1_000_000_000: return f"{v/1_000_000_000:.2f}M"
     if abs(v) >= 1_000_000:     return f"{v/1_000_000:.1f}Jt"
     return f"{v:,.0f}"
-
 def R(v): return f"{float(v):,.0f}"
-def P(n, d): return f"{n/d*100:.1f}%" if d else "–"
+def P(n,d): return f"{n/d*100:.1f}%" if d else "–"
 
 # ── SUPABASE ─────────────────────────────────────────────────────────────────
 @st.cache_resource(show_spinner=False)
@@ -292,7 +219,6 @@ def load_data():
             page += 1
         if not rows:
             return pd.DataFrame(), last_updated
-
         df = pd.DataFrame(rows)
         for c in ("id","created_at"):
             if c in df.columns: df.drop(columns=c, inplace=True)
@@ -305,51 +231,48 @@ def load_data():
             df[col] = pd.to_datetime(df[col], errors="coerce")
         return df, last_updated
     except Exception as e:
-        st.error(f"Gagal ambil data Supabase: {e}")
+        st.error(f"Gagal ambil data: {e}")
         return pd.DataFrame(), last_updated
 
-# ── PLOTLY TEMPLATE PMA ──────────────────────────────────────────────────────
-PMA_RED   = "#B01C2E"
-PMA_LIGHT = "#FAF7F5"
-PLOT_FONT = dict(family="Inter, sans-serif", size=11, color="#2B2B2B")
-
-def pma_layout(fig, height=300, margin=None):
-    m = margin or dict(t=16, b=12, l=8, r=8)
+# ── PLOTLY BASE ───────────────────────────────────────────────────────────────
+FONT = dict(family="Inter, sans-serif", size=11, color="#2C2C2C")
+def plot_base(fig, h=300, margin=None):
+    m = margin or dict(t=12,b=12,l=6,r=6)
     fig.update_layout(
-        plot_bgcolor=PMA_LIGHT,
-        paper_bgcolor="rgba(0,0,0,0)",
-        font=PLOT_FONT,
-        height=height,
-        margin=m,
-        xaxis=dict(gridcolor="#EDE8E6", linecolor="#D0C8C5", tickfont_size=10),
-        yaxis=dict(gridcolor="#EDE8E6", linecolor="#D0C8C5", tickfont_size=10),
+        plot_bgcolor="#F0EBE3", paper_bgcolor="rgba(0,0,0,0)",
+        font=FONT, height=h, margin=m,
+        xaxis=dict(gridcolor="#DDD5CC", linecolor="#C8BFB7", tickfont_size=10),
+        yaxis=dict(gridcolor="#DDD5CC", linecolor="#C8BFB7", tickfont_size=10),
         showlegend=False,
     )
     return fig
 
-def sec(title, badge=None, badge_type="red"):
-    badge_html = ""
-    if badge:
-        cls = "badge-red" if badge_type=="red" else "badge-green"
-        badge_html = f"<span class='{cls}'>{badge}</span>"
-    st.markdown(f"<p class='sec-title'>{title}{badge_html}</p>",
-                unsafe_allow_html=True)
+def sec(t): st.markdown(f"<p class='sec'>{t}</p>", unsafe_allow_html=True)
 
-# ════════════════════════════════════════════════════════════════════════════
+def kpi(col_obj, label, val, sub="", cls=""):
+    with col_obj:
+        st.markdown(
+            f"<div class='kpi {cls}'>"
+            f"<p class='kpi-lbl'>{label}</p>"
+            f"<p class='kpi-val'>{val}</p>"
+            f"<p class='kpi-sub'>{sub}</p>"
+            f"</div>", unsafe_allow_html=True)
+
+# ════════════════════════════════════════════════════════════════════
 # MAIN
-# ════════════════════════════════════════════════════════════════════════════
+# ════════════════════════════════════════════════════════════════════
 def main():
-    with st.spinner("Mengambil data..."):
+    with st.spinner("Memuat data..."):
         df, last_updated = load_data()
 
-    # ── HEADER ───────────────────────────────────────────────────────────
+    # ── HEADER — judul tidak terpotong ───────────────────────────────
     st.markdown(f"""
     <div class="pma-header">
-      <div>
-        <p class="pma-header-title">AR Outstanding MT — MTI NKA</p>
-        <p class="pma-header-sub">PT Pinus Merah Abadi · FAD Team · Data via Supabase</p>
+      <div style="min-width:0;flex:1;margin-right:16px">
+        <p class="pma-title">AR Outstanding MT — MTI NKA</p>
+        <p class="pma-sub">PT Pinus Merah Abadi &nbsp;·&nbsp; FAD Team &nbsp;·&nbsp; Data via Supabase</p>
       </div>
-      <span class="pma-header-date">{datetime.now().strftime('%d %b %Y')}</span>
+      <span class="pma-date">{datetime.now().strftime('%d %b %Y')}</span>
     </div>
     """, unsafe_allow_html=True)
 
@@ -357,9 +280,8 @@ def main():
         st.warning("Belum ada data. Jalankan **JALANKAN_UPLOAD.bat** untuk upload data.")
         return
 
-    # ── SIDEBAR ───────────────────────────────────────────────────────────
-    st.sidebar.markdown("### Filter", unsafe_allow_html=False)
-
+    # ── SIDEBAR ───────────────────────────────────────────────────────
+    st.sidebar.markdown("### Filter")
     def sb(label, col, src):
         opts = ["Semua"] + sorted(src[col].dropna().unique().tolist())
         return st.sidebar.selectbox(label, opts, key=f"f_{col}")
@@ -378,344 +300,313 @@ def main():
         st.cache_data.clear(); st.rerun()
     st.sidebar.caption(f"Update: {last_updated}")
 
-    # ── APPLY FILTER ──────────────────────────────────────────────────────
+    # ── FILTER ────────────────────────────────────────────────────────
     dff = df.copy()
-    if sel_region!="Semua": dff = dff[dff["REGION"]     ==sel_region]
-    if sel_area  !="Semua": dff = dff[dff["NAMA AREA"]  ==sel_area]
-    if sel_jenis !="Semua": dff = dff[dff["JENIS OUTLET"]==sel_jenis]
-    if sel_asm   !="Semua": dff = dff[dff["ASM"]        ==sel_asm]
-    if sel_rbm   !="Semua": dff = dff[dff["RBM"]        ==sel_rbm]
+    if sel_region!="Semua": dff = dff[dff["REGION"]      ==sel_region]
+    if sel_area  !="Semua": dff = dff[dff["NAMA AREA"]   ==sel_area]
+    if sel_jenis !="Semua": dff = dff[dff["JENIS OUTLET"] ==sel_jenis]
+    if sel_asm   !="Semua": dff = dff[dff["ASM"]         ==sel_asm]
+    if sel_rbm   !="Semua": dff = dff[dff["RBM"]         ==sel_rbm]
     if sel_grp   !="Semua": dff = dff[dff["GROUPING OS"] ==sel_grp]
     if sel_bkt:              dff = dff[dff["KELOMPOK"].isin(sel_bkt)]
-
     if dff.empty:
         st.warning("Tidak ada data sesuai filter."); return
 
-    # ── UPDATE BAR ────────────────────────────────────────────────────────
+    # ── UPDATE BAR ────────────────────────────────────────────────────
     st.markdown(f"""
-    <div class="update-bar">
+    <div class="upd-bar">
       <span>⏱ Update terakhir: <strong>{last_updated}</strong></span>
       <span>{len(dff):,} faktur ditampilkan</span>
     </div>""", unsafe_allow_html=True)
 
-    # ════════════════════════════════════════════════════════════════════
-    # BARIS 1 — 6 KPI UTAMA
-    # ════════════════════════════════════════════════════════════════════
-    total_nom  = dff["NOMINAL"].sum()
-    total_nf   = dff["Nilai Faktur"].sum()
-    total_ov   = dff["OVERDUE"].sum()
-    total_cur  = dff["CURRENT"].sum()
-    total_akt  = dff["ACTUAL PELUNASAN"].sum()
-    total_tgt  = dff["TARGET PELUNASAN"].sum()
-    total_due  = dff["DUE DATE"].sum()
-    total_qty  = int(dff["Qty Faktur Gantung"].sum())
-    pct_ov     = total_ov / total_nom * 100 if total_nom else 0
-    pct_coll   = total_akt / total_tgt * 100 if total_tgt else 0
-
-    def kpi(col_obj, label, val, sub="", cls=""):
-        with col_obj:
-            st.markdown(
-                f"<div class='kpi-card {cls}'>"
-                f"<p class='kpi-label'>{label}</p>"
-                f"<p class='kpi-value'>{val}</p>"
-                f"<p class='kpi-sub'>{sub}</p>"
-                f"</div>", unsafe_allow_html=True)
+    # ── KPI UTAMA ─────────────────────────────────────────────────────
+    total_nom = dff["NOMINAL"].sum()
+    total_ov  = dff["OVERDUE"].sum()
+    total_cur = dff["CURRENT"].sum()
+    total_akt = dff["ACTUAL PELUNASAN"].sum()
+    total_tgt = dff["TARGET PELUNASAN"].sum()
+    total_due = dff["DUE DATE"].sum()
+    total_qty = int(dff["Qty Faktur Gantung"].sum())
 
     c1,c2,c3,c4,c5,c6 = st.columns(6)
-    kpi(c1, "Total Outstanding",   M(total_nom), f"Nilai Faktur {M(total_nf)}")
-    kpi(c2, "Overdue",             M(total_ov),  f"{pct_ov:.1f}% dari outstanding", "")
-    kpi(c3, "Current",             M(total_cur), f"{P(total_cur,total_nom)} dari total", "green")
-    kpi(c4, "% Collection",        f"{pct_coll:.1f}%",
-        f"Actual {M(total_akt)} / Target {M(total_tgt)}", "warning")
-    kpi(c5, "Due Date Hari Ini",   M(total_due), "Nominal jatuh tempo hari ini", "secondary")
-    kpi(c6, "Qty Faktur Gantung",  f"{total_qty:,}", f"{len(dff):,} baris data", "dark")
-
+    kpi(c1,"Total Outstanding", M(total_nom), f"Nilai Faktur {M(dff['Nilai Faktur'].sum())}")
+    kpi(c2,"Overdue",           M(total_ov),  P(total_ov,total_nom)+" dari outstanding")
+    kpi(c3,"Current",           M(total_cur), P(total_cur,total_nom)+" dari total","green")
+    kpi(c4,"% Collection",      P(total_akt,total_tgt),
+        f"Actual {M(total_akt)} / Target {M(total_tgt)}","gold")
+    kpi(c5,"Due Date Hari Ini", M(total_due), "Nominal jatuh tempo hari ini","stone")
+    kpi(c6,"Qty Faktur Gantung",f"{total_qty:,}", f"{len(dff):,} baris data","orange")
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # ════════════════════════════════════════════════════════════════════
-    # BARIS 2 — BUCKET AGING (strip horizontal penuh)
-    # ════════════════════════════════════════════════════════════════════
+    # ── BUCKET AGING STRIP ────────────────────────────────────────────
     bv = {b: dff[b].sum() for b in BUCKETS}
     grand = sum(bv.values())
-
-    cells_html = "".join([
-        f"<div class='bucket-cell' style='border-top-color:{BUCKET_BORDER[b]}'>"
-        f"<p class='bucket-cell-label'>{b}</p>"
-        f"<p class='bucket-cell-val'>{M(bv[b])}</p>"
-        f"</div>"
+    cells = "".join([
+        f"<div class='bk-cell' style='border-top-color:{BUCKET_COLOR[b]}'>"
+        f"<p class='bk-lbl'>{b}</p><p class='bk-val'>{M(bv[b])}</p></div>"
         for b in BUCKETS
     ])
-    cells_html += (
-        f"<div class='bucket-cell' style='border-top-color:#2B2B2B;background:#2B2B2B'>"
-        f"<p class='bucket-cell-label' style='color:#FAF7F5'>TOTAL</p>"
-        f"<p class='bucket-cell-val' style='color:#FFFFFF'>{M(grand)}</p>"
-        f"</div>"
+    cells += (
+        f"<div class='bk-cell' style='border-top-color:#2C2C2C;background:#2C2C2C'>"
+        f"<p class='bk-lbl' style='color:#C8BFB7'>TOTAL</p>"
+        f"<p class='bk-val' style='color:#fff'>{M(grand)}</p></div>"
     )
-    st.markdown(f"<div class='bucket-strip'>{cells_html}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='bk-strip'>{cells}</div>", unsafe_allow_html=True)
 
-    # ════════════════════════════════════════════════════════════════════
-    # BARIS 3 — Chart KIRI: Grouping OS | KANAN: Distribusi Jenis Outlet
-    # ════════════════════════════════════════════════════════════════════
-    sec("Komposisi Outstanding")
+    # ════════════════════════════════════════════════════════════════
+    # SO BLOCK SECTION — informasi baru, jadi bintang utama
+    # ════════════════════════════════════════════════════════════════
+    sec("STATUS SO BLOCK — REKOMENDASI TINDAKAN")
+
+    # Hitung per kategori SO
+    df_ov = dff[dff["KELOMPOK"] != "CURRENT"].copy()
+    df_ov["SO_KAT"] = df_ov["KELOMPOK"].map(SO_MAP)
+
+    so_sum = df_ov.groupby("SO_KAT").agg(
+        Nominal=("NOMINAL","sum"),
+        Faktur=("No Faktur","count"),
+        Area=("NAMA AREA","nunique"),
+    ).reindex(["WARNING SO","SOFT BLOCK","CRITICAL BLOCK"]).fillna(0)
+
+    warn_nom = so_sum.loc["WARNING SO","Nominal"]   if "WARNING SO"      in so_sum.index else 0
+    soft_nom = so_sum.loc["SOFT BLOCK","Nominal"]   if "SOFT BLOCK"      in so_sum.index else 0
+    crit_nom = so_sum.loc["CRITICAL BLOCK","Nominal"] if "CRITICAL BLOCK" in so_sum.index else 0
+    warn_fkt = int(so_sum.loc["WARNING SO","Faktur"])    if "WARNING SO"      in so_sum.index else 0
+    soft_fkt = int(so_sum.loc["SOFT BLOCK","Faktur"])    if "SOFT BLOCK"      in so_sum.index else 0
+    crit_fkt = int(so_sum.loc["CRITICAL BLOCK","Faktur"]) if "CRITICAL BLOCK" in so_sum.index else 0
+    warn_area= int(so_sum.loc["WARNING SO","Area"])      if "WARNING SO"      in so_sum.index else 0
+    soft_area= int(so_sum.loc["SOFT BLOCK","Area"])      if "SOFT BLOCK"      in so_sum.index else 0
+    crit_area= int(so_sum.loc["CRITICAL BLOCK","Area"])  if "CRITICAL BLOCK"  in so_sum.index else 0
+
+    st.markdown(f"""
+    <div class="so-wrap">
+      <div class="so-card so-warn">
+        <span class="so-badge warn">⚠ Warning SO</span>
+        <p class="so-val">{M(warn_nom)}</p>
+        <p class="so-sub">{warn_fkt:,} faktur &nbsp;·&nbsp; {warn_area} area</p>
+        <p class="so-desc">Kelompok 1–7 hari & 8–30 hari — segera follow up sebelum eskalasi</p>
+      </div>
+      <div class="so-card so-soft">
+        <span class="so-badge soft">🔶 Soft Block</span>
+        <p class="so-val">{M(soft_nom)}</p>
+        <p class="so-sub">{soft_fkt:,} faktur &nbsp;·&nbsp; {soft_area} area</p>
+        <p class="so-desc">Kelompok 31–60 & 61–90 hari — pertimbangkan hold pengiriman baru</p>
+      </div>
+      <div class="so-card so-crit">
+        <span class="so-badge crit">🔴 Critical Block</span>
+        <p class="so-val">{M(crit_nom)}</p>
+        <p class="so-sub">{crit_fkt:,} faktur &nbsp;·&nbsp; {crit_area} area</p>
+        <p class="so-desc">Kelompok 91–120, 121+ hari & &lt;2026 — blokir SO, eskalasi ke manajemen</p>
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Tabel TOP AREA per SO Kategori — 3 kolom berdampingan
+    c_w, c_s, c_c = st.columns(3)
+
+    def so_table(col_obj, kat, title):
+        with col_obj:
+            st.caption(f"**Top Area — {title}**")
+            sub = df_ov[df_ov["SO_KAT"]==kat]
+            if sub.empty:
+                st.info("Tidak ada data"); return
+            t = (sub.groupby("NAMA AREA")
+                 .agg(Nominal=("NOMINAL","sum"), Faktur=("No Faktur","count"))
+                 .reset_index().sort_values("Nominal",ascending=False).head(10))
+            t["%"] = t["Nominal"].apply(lambda v: P(v, sub["NOMINAL"].sum()))
+            t["Nominal"] = t["Nominal"].apply(M)
+            t.columns = ["Nama Area","Nominal","Faktur","%"]
+            st.dataframe(t, use_container_width=True, hide_index=True, height=300)
+
+    so_table(c_w, "WARNING SO",      "⚠ Warning SO")
+    so_table(c_s, "SOFT BLOCK",      "🔶 Soft Block")
+    so_table(c_c, "CRITICAL BLOCK",  "🔴 Critical Block")
+
+    # Chart: SO Block per Nama Area — stacked bar
+    sec("DISTRIBUSI SO BLOCK PER NAMA AREA")
+    pivot = (
+        df_ov.groupby(["NAMA AREA","SO_KAT"])["NOMINAL"]
+        .sum().unstack(fill_value=0).reset_index()
+    )
+    for k in ["WARNING SO","SOFT BLOCK","CRITICAL BLOCK"]:
+        if k not in pivot.columns: pivot[k] = 0
+    pivot["TOTAL"] = pivot[["WARNING SO","SOFT BLOCK","CRITICAL BLOCK"]].sum(axis=1)
+    pivot = pivot.nlargest(20,"TOTAL")
+
+    fig_so = go.Figure()
+    cfg = [
+        ("WARNING SO",      "#B8860B", "⚠ Warning SO"),
+        ("SOFT BLOCK",      "#C05000", "🔶 Soft Block"),
+        ("CRITICAL BLOCK",  "#A8192E", "🔴 Critical Block"),
+    ]
+    for col_key, color, name in cfg:
+        if col_key in pivot.columns:
+            fig_so.add_trace(go.Bar(
+                name=name, x=pivot["NAMA AREA"], y=pivot[col_key],
+                marker_color=color,
+                text=pivot[col_key].apply(lambda v: M(v) if v > 0 else ""),
+                textposition="inside", textfont=dict(size=9,color="#fff"),
+            ))
+    plot_base(fig_so, h=360)
+    fig_so.update_layout(
+        barmode="stack", showlegend=True,
+        legend=dict(orientation="h", x=0, y=1.06, font_size=11),
+        xaxis_tickangle=-35, yaxis_tickformat=",",
+    )
+    st.plotly_chart(fig_so, use_container_width=True)
+
+    # ════════════════════════════════════════════════════════════════
+    # KOMPOSISI OUTSTANDING
+    # ════════════════════════════════════════════════════════════════
+    sec("KOMPOSISI OUTSTANDING")
     col_a, col_b = st.columns([5,4])
 
     with col_a:
-        grp_os = (dff.groupby("GROUPING OS")["NOMINAL"]
+        grp_os = (dff[dff["NOMINAL"]>0].groupby("GROUPING OS")["NOMINAL"]
                   .sum().sort_values().reset_index())
-        # Buang yang 0 dan negatif kecil (RETUR, LUNAS)
-        grp_os = grp_os[grp_os["NOMINAL"] > 0]
         grp_os.columns = ["Kategori","Nominal"]
-        # Warna: satu warna solid PMA merah, luminosity bervariasi by rank
         n = len(grp_os)
-        colors = [f"rgba(176,28,46,{0.35 + 0.65*(i/max(n-1,1)):.2f})" for i in range(n)]
-        fig_os = go.Figure(go.Bar(
-            x=grp_os["Nominal"], y=grp_os["Kategori"],
-            orientation="h",
+        colors = [f"rgba(168,25,46,{0.3+0.7*(i/max(n-1,1)):.2f})" for i in range(n)]
+        fig_h = go.Figure(go.Bar(
+            x=grp_os["Nominal"], y=grp_os["Kategori"], orientation="h",
             marker_color=colors,
             text=[M(v) for v in grp_os["Nominal"]],
-            textposition="outside",
-            textfont=dict(size=10, color="#2B2B2B"),
+            textposition="outside", textfont=dict(size=10,color="#2C2C2C"),
         ))
-        pma_layout(fig_os, height=310)
-        fig_os.update_layout(xaxis_tickformat=",")
-        st.plotly_chart(fig_os, use_container_width=True)
+        plot_base(fig_h, h=300)
+        fig_h.update_layout(xaxis_tickformat=",")
+        st.plotly_chart(fig_h, use_container_width=True)
 
     with col_b:
-        # Donut: CURRENT vs tiap bucket overdue
-        ov_breakdown = [(b, bv[b]) for b in BUCKETS if b != "CURRENT" and bv[b] > 0]
-        pie_labels = ["CURRENT"] + [x[0] for x in ov_breakdown]
-        pie_vals   = [bv["CURRENT"]] + [x[1] for x in ov_breakdown]
-        pie_colors = (
-            [BUCKET_BORDER["CURRENT"]] +
-            [BUCKET_BORDER[x[0]] for x in ov_breakdown]
-        )
+        # Donut — warna nude per bucket
+        pie_labels = [b for b in BUCKETS if bv[b] > 0]
+        pie_vals   = [bv[b] for b in BUCKETS if bv[b] > 0]
+        pie_colors = [BUCKET_COLOR[b] for b in BUCKETS if bv[b] > 0]
         fig_pie = go.Figure(go.Pie(
             labels=pie_labels, values=pie_vals,
-            marker_colors=pie_colors,
-            hole=0.55,
-            textinfo="percent",
-            textfont_size=10,
+            marker_colors=pie_colors, hole=0.55,
+            textinfo="percent", textfont_size=10,
             hovertemplate="%{label}: %{value:,.0f}<extra></extra>",
         ))
         fig_pie.update_layout(
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            height=310,
-            margin=dict(t=16,b=12,l=0,r=0),
-            legend=dict(font_size=10, orientation="v",
-                        x=1.02, y=0.5, xanchor="left"),
+            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+            height=300, margin=dict(t=12,b=12,l=0,r=0),
+            legend=dict(font_size=10, x=1.02, y=0.5, xanchor="left"),
             showlegend=True,
             annotations=[dict(
                 text=f"<b>{M(grand)}</b><br><span style='font-size:9px'>Total OS</span>",
-                x=0.5, y=0.5, showarrow=False,
-                font=dict(size=13, color="#2B2B2B"),
+                x=0.5,y=0.5,showarrow=False,font=dict(size=13,color="#2C2C2C"),
             )],
         )
         st.plotly_chart(fig_pie, use_container_width=True)
 
-    # ════════════════════════════════════════════════════════════════════
-    # BARIS 4 — TABEL NAMA AREA (Current | Overdue | %Curr/OD)
-    #         + TABEL OVERDUE per KATEGORI OVERDUE
-    # ════════════════════════════════════════════════════════════════════
-    sec("Outstanding per Wilayah & Kategori")
+    # ════════════════════════════════════════════════════════════════
+    # TABEL NAMA AREA + KATEGORI OVERDUE
+    # ════════════════════════════════════════════════════════════════
+    sec("OUTSTANDING PER WILAYAH & KATEGORI")
     col_c, col_d = st.columns(2)
 
     with col_c:
-        st.caption("**Per Nama Area** — Current · Overdue · % Curr/OD")
-        t_area = (
-            dff.groupby("NAMA AREA")
-            .agg(
-                Nilai_Faktur=("Nilai Faktur","sum"),
-                Current=("CURRENT","sum"),
-                Overdue=("OVERDUE","sum"),
-            )
-            .reset_index()
-            .sort_values("Nilai_Faktur", ascending=False)
-        )
-        t_area["% Curr/OD"] = t_area.apply(
-            lambda r: P(r["Current"], r["Current"]+r["Overdue"]), axis=1)
-        t_area["Nilai Faktur"] = t_area["Nilai_Faktur"].apply(R)
-        t_area["Current"]      = t_area["Current"].apply(R)
-        t_area["Overdue"]      = t_area["Overdue"].apply(R)
-        t_area = t_area[["NAMA AREA","Nilai Faktur","Current","Overdue","% Curr/OD"]]
+        st.caption("**Per Nama Area** — Nilai Faktur · Current · Overdue · % Curr/OD")
+        t_area = (dff.groupby("NAMA AREA")
+                  .agg(NF=("Nilai Faktur","sum"),Cur=("CURRENT","sum"),Ov=("OVERDUE","sum"))
+                  .reset_index().sort_values("NF",ascending=False))
+        t_area["% C/OD"] = t_area.apply(lambda r: P(r["Cur"],r["Cur"]+r["Ov"]),axis=1)
+        for c in ["NF","Cur","Ov"]: t_area[c] = t_area[c].apply(M)
         t_area.columns = ["Nama Area","Nilai Faktur","Current","Overdue","% Curr/OD"]
         st.dataframe(t_area, use_container_width=True, hide_index=True, height=340)
 
     with col_d:
-        st.caption("**Per Kategori Overdue** (KATEGORI OVERDUE)")
-        t_kat = (
-            dff[dff["NOMINAL"]>0]
-            .groupby("KATEGORI OVERDUE")
-            .agg(
-                Nominal=("NOMINAL","sum"),
-                Faktur=("No Faktur","count"),
-            )
-            .reset_index()
-            .sort_values("Nominal", ascending=False)
-        )
-        t_kat["% Total"] = t_kat["Nominal"].apply(lambda v: P(v, total_nom))
+        st.caption("**Per Kategori Overdue**")
+        t_kat = (dff[dff["NOMINAL"]>0].groupby("KATEGORI OVERDUE")
+                 .agg(Nominal=("NOMINAL","sum"),Faktur=("No Faktur","count"))
+                 .reset_index().sort_values("Nominal",ascending=False))
+        t_kat["%"] = t_kat["Nominal"].apply(lambda v: P(v,total_nom))
         t_kat["Nominal"] = t_kat["Nominal"].apply(R)
-        t_kat.columns = ["Kategori Overdue","Nominal","Jml Faktur","% Total"]
+        t_kat.columns = ["Kategori Overdue","Nominal","Jml Faktur","%"]
         st.dataframe(t_kat, use_container_width=True, hide_index=True, height=340)
 
-    # ════════════════════════════════════════════════════════════════════
-    # BARIS 5 — COLLECTION: Actual vs Target
-    #           Chart grouped bar + tabel ASM collection rate
-    # ════════════════════════════════════════════════════════════════════
-    sec("Collection — Actual vs Target Pelunasan")
+    # ════════════════════════════════════════════════════════════════
+    # COLLECTION — ACTUAL vs TARGET
+    # ════════════════════════════════════════════════════════════════
+    sec("COLLECTION — ACTUAL vs TARGET PELUNASAN")
     col_e, col_f = st.columns([5,4])
 
     with col_e:
-        # Grouped bar: top 10 Nama Area, dua bar (Actual & Target)
-        t_coll = (
-            dff.groupby("NAMA AREA")
-            .agg(Actual=("ACTUAL PELUNASAN","sum"),
-                 Target=("TARGET PELUNASAN","sum"))
-            .reset_index()
-        )
-        t_coll = t_coll[t_coll["Target"]>0].nlargest(10,"Target")
-        fig_coll = go.Figure()
-        fig_coll.add_trace(go.Bar(
+        t_coll = (dff.groupby("NAMA AREA")
+                  .agg(Actual=("ACTUAL PELUNASAN","sum"),Target=("TARGET PELUNASAN","sum"))
+                  .reset_index())
+        t_coll = t_coll[t_coll["Target"]>0].nlargest(12,"Target")
+        fig_c = go.Figure()
+        fig_c.add_trace(go.Bar(
             name="Target", x=t_coll["NAMA AREA"], y=t_coll["Target"],
-            marker_color="#E8BCBF", text=[M(v) for v in t_coll["Target"]],
-            textposition="outside", textfont_size=9,
+            marker_color="#D9D0C7",
+            text=[M(v) for v in t_coll["Target"]],
+            textposition="outside", textfont=dict(size=9),
         ))
-        fig_coll.add_trace(go.Bar(
+        fig_c.add_trace(go.Bar(
             name="Actual", x=t_coll["NAMA AREA"], y=t_coll["Actual"],
-            marker_color=PMA_RED, text=[M(v) for v in t_coll["Actual"]],
-            textposition="outside", textfont_size=9,
+            marker_color="#A8192E",
+            text=[M(v) for v in t_coll["Actual"]],
+            textposition="outside", textfont=dict(size=9,color="#fff"),
         ))
-        pma_layout(fig_coll, height=320)
-        fig_coll.update_layout(
-            barmode="group",
-            showlegend=True,
-            legend=dict(orientation="h", x=0, y=1.08, font_size=10),
-            xaxis_tickangle=-30,
-            yaxis_tickformat=",",
+        plot_base(fig_c, h=320)
+        fig_c.update_layout(
+            barmode="group", showlegend=True,
+            legend=dict(orientation="h",x=0,y=1.08,font_size=11),
+            xaxis_tickangle=-30, yaxis_tickformat=",",
         )
-        st.plotly_chart(fig_coll, use_container_width=True)
+        st.plotly_chart(fig_c, use_container_width=True)
 
     with col_f:
         st.caption("**Collection Rate per ASM**")
-        t_asm_coll = (
-            dff.groupby("ASM")
-            .agg(
-                Actual=("ACTUAL PELUNASAN","sum"),
-                Target=("TARGET PELUNASAN","sum"),
-                Outstanding=("NOMINAL","sum"),
-            )
-            .reset_index()
-        )
-        t_asm_coll = t_asm_coll[t_asm_coll["Target"]>0].sort_values("Target",ascending=False)
-        t_asm_coll["%Coll"] = t_asm_coll.apply(lambda r: P(r["Actual"],r["Target"]), axis=1)
-        t_asm_coll["Actual"]      = t_asm_coll["Actual"].apply(M)
-        t_asm_coll["Target"]      = t_asm_coll["Target"].apply(M)
-        t_asm_coll["Outstanding"] = t_asm_coll["Outstanding"].apply(M)
-        t_asm_coll.columns = ["ASM","Actual","Target","Outstanding","% Coll"]
-        st.dataframe(t_asm_coll, use_container_width=True, hide_index=True, height=320)
+        t_asm = (dff.groupby("ASM")
+                 .agg(Actual=("ACTUAL PELUNASAN","sum"),
+                      Target=("TARGET PELUNASAN","sum"),
+                      OS=("NOMINAL","sum"))
+                 .reset_index())
+        t_asm = t_asm[t_asm["Target"]>0].sort_values("Target",ascending=False)
+        t_asm["%Coll"] = t_asm.apply(lambda r: P(r["Actual"],r["Target"]),axis=1)
+        for c in ["Actual","Target","OS"]: t_asm[c] = t_asm[c].apply(M)
+        t_asm.columns = ["ASM","Actual","Target","Outstanding","% Coll"]
+        st.dataframe(t_asm, use_container_width=True, hide_index=True, height=320)
 
-    # ════════════════════════════════════════════════════════════════════
-    # BARIS 6 — OVERDUE per JENIS OUTLET + RBM Summary
-    # ════════════════════════════════════════════════════════════════════
-    sec("Breakdown Jenis Outlet & RBM")
+    # ════════════════════════════════════════════════════════════════
+    # BREAKDOWN OUTLET & RBM
+    # ════════════════════════════════════════════════════════════════
+    sec("BREAKDOWN JENIS OUTLET & RBM")
     col_g, col_h = st.columns([4,5])
 
     with col_g:
-        t_outlet = (
-            dff.groupby("JENIS OUTLET")
-            .agg(Outstanding=("NOMINAL","sum"), Overdue=("OVERDUE","sum"))
-            .reset_index()
-            .sort_values("Outstanding", ascending=False)
-            .head(12)
-        )
-        t_outlet["% OD"] = t_outlet.apply(lambda r: P(r["Overdue"],r["Outstanding"]), axis=1)
-        t_outlet["Outstanding"] = t_outlet["Outstanding"].apply(M)
-        t_outlet["Overdue"]     = t_outlet["Overdue"].apply(M)
-        t_outlet.columns = ["Jenis Outlet","Outstanding","Overdue","% OD"]
-        st.dataframe(t_outlet, use_container_width=True, hide_index=True, height=320)
+        t_out = (dff.groupby("JENIS OUTLET")
+                 .agg(OS=("NOMINAL","sum"),OV=("OVERDUE","sum"))
+                 .reset_index().sort_values("OS",ascending=False).head(12))
+        t_out["%OD"] = t_out.apply(lambda r: P(r["OV"],r["OS"]),axis=1)
+        for c in ["OS","OV"]: t_out[c] = t_out[c].apply(M)
+        t_out.columns = ["Jenis Outlet","Outstanding","Overdue","%OD"]
+        st.dataframe(t_out, use_container_width=True, hide_index=True, height=340)
 
     with col_h:
-        t_rbm = (
-            dff.groupby("RBM")
-            .agg(
-                Outstanding=("NOMINAL","sum"),
-                Overdue=("OVERDUE","sum"),
-                Actual=("ACTUAL PELUNASAN","sum"),
-                Target=("TARGET PELUNASAN","sum"),
-            )
-            .reset_index()
-            .sort_values("Outstanding", ascending=False)
-        )
-        t_rbm["%OD"]   = t_rbm.apply(lambda r: P(r["Overdue"],r["Outstanding"]), axis=1)
-        t_rbm["%Coll"] = t_rbm.apply(lambda r: P(r["Actual"],r["Target"]), axis=1)
-        for c in ["Outstanding","Overdue","Actual","Target"]:
-            t_rbm[c] = t_rbm[c].apply(M)
+        t_rbm = (dff.groupby("RBM")
+                 .agg(OS=("NOMINAL","sum"),OV=("OVERDUE","sum"),
+                      Akt=("ACTUAL PELUNASAN","sum"),Tgt=("TARGET PELUNASAN","sum"))
+                 .reset_index().sort_values("OS",ascending=False))
+        t_rbm["%OD"]   = t_rbm.apply(lambda r: P(r["OV"],r["OS"]),axis=1)
+        t_rbm["%Coll"] = t_rbm.apply(lambda r: P(r["Akt"],r["Tgt"]),axis=1)
+        for c in ["OS","OV","Akt","Tgt"]: t_rbm[c] = t_rbm[c].apply(M)
         t_rbm.columns = ["RBM","Outstanding","Overdue","Actual Pel.","Target Pel.","%OD","%Coll"]
-        st.dataframe(t_rbm, use_container_width=True, hide_index=True, height=320)
+        st.dataframe(t_rbm, use_container_width=True, hide_index=True, height=340)
 
-    # ════════════════════════════════════════════════════════════════════
-    # BARIS 7 — CHART: Top 10 NAMA AREA outstanding
-    #         + Distribusi OVERDUE? (hari overdue)
-    # ════════════════════════════════════════════════════════════════════
-    sec("Top Wilayah & Profil Hari Overdue")
-    col_i, col_j = st.columns(2)
-
-    with col_i:
-        top_area = (
-            dff.groupby("NAMA AREA")["NOMINAL"]
-            .sum().nlargest(10).reset_index()
-        )
-        top_area.columns = ["Area","Nominal"]
-        # Warna: area terbesar = merah PMA penuh, sisanya fade
-        n = len(top_area)
-        bar_colors = [PMA_RED if i==0
-                      else f"rgba(176,28,46,{max(0.25, 1-i*0.09):.2f})"
-                      for i in range(n)]
-        fig_area = go.Figure(go.Bar(
-            x=top_area["Nominal"], y=top_area["Area"],
-            orientation="h",
-            marker_color=bar_colors,
-            text=[M(v) for v in top_area["Nominal"]],
-            textposition="outside",
-            textfont=dict(size=10),
-        ))
-        pma_layout(fig_area, height=320)
-        fig_area.update_layout(yaxis=dict(autorange="reversed"), xaxis_tickformat=",")
-        st.plotly_chart(fig_area, use_container_width=True)
-
-    with col_j:
-        # Histogram distribusi hari overdue — insight yang tidak ada di dashboard lama
-        df_ov = dff[dff["OVERDUE?"]>0].copy()
-        if not df_ov.empty:
-            bins   = [0,7,30,60,90,120,9999]
-            labels = ["1–7 hr","8–30 hr","31–60 hr","61–90 hr","91–120 hr","121+ hr"]
-            df_ov["bucket_hari"] = pd.cut(df_ov["OVERDUE?"], bins=bins,
-                                          labels=labels, right=True)
-            dist = (df_ov.groupby("bucket_hari",observed=True)
-                    .agg(Nominal=("NOMINAL","sum"), Faktur=("No Faktur","count"))
-                    .reset_index())
-            dist.columns = ["Bucket","Nominal","Faktur"]
-            pal = ["#3DAB6E","#C4640A","#D4870A","#B01C2E","#8A0E1E","#5C0813"]
-            fig_dist = go.Figure(go.Bar(
-                x=dist["Bucket"], y=dist["Nominal"],
-                marker_color=pal[:len(dist)],
-                text=[f"{M(v)}\n({r} fktr)" for v,r in zip(dist["Nominal"],dist["Faktur"])],
-                textposition="outside", textfont_size=9,
-            ))
-            pma_layout(fig_dist, height=320)
-            fig_dist.update_layout(yaxis_tickformat=",")
-            st.plotly_chart(fig_dist, use_container_width=True)
-
-    # ════════════════════════════════════════════════════════════════════
-    # BARIS 8 — DETAIL FAKTUR (expandable)
-    # ════════════════════════════════════════════════════════════════════
+    # ════════════════════════════════════════════════════════════════
+    # DETAIL FAKTUR
+    # ════════════════════════════════════════════════════════════════
     ovrd_ct = int((dff["OVERDUE?"]>0).sum())
-    sec("Detail Faktur", badge=f"{ovrd_ct:,} faktur overdue", badge_type="red")
+    sec(f"DETAIL FAKTUR — {ovrd_ct:,} FAKTUR OVERDUE")
 
-    COLS_DET = ["NAMA AREA","RBM","ASM","NAMA SALES","NAMA TOKO",
-                "No Faktur","Tanggal Faktur","Tanggal JT",
-                "Nilai Faktur","Saldo Akhir","KELOMPOK","OVERDUE?","GROUPING OS"]
-    cols_ok = [c for c in COLS_DET if c in dff.columns]
+    COLS = ["NAMA AREA","RBM","ASM","NAMA SALES","NAMA TOKO","No Faktur",
+            "Tanggal Faktur","Tanggal JT","Nilai Faktur","Saldo Akhir",
+            "KELOMPOK","OVERDUE?","GROUPING OS"]
+    cols_ok = [c for c in COLS if c in dff.columns]
     tbl = dff[cols_ok].copy()
     if "Tanggal Faktur" in tbl.columns:
         tbl["Tanggal Faktur"] = tbl["Tanggal Faktur"].dt.strftime("%d %b %Y")
@@ -728,10 +619,9 @@ def main():
         "Saldo Akhir":"Sisa AR","OVERDUE?":"Hari OD","KELOMPOK":"Kelompok",
         "GROUPING OS":"Grouping OS",
     }, inplace=True)
-    tbl.insert(0,"#", range(1, len(tbl)+1))
+    tbl.insert(0,"#",range(1,len(tbl)+1))
 
-    with st.expander(f"🔽 Tampilkan {len(tbl):,} baris · Nilai Faktur Total: {M(dff['Nilai Faktur'].sum())} · OS: {M(total_nom)}",
-                     expanded=False):
+    with st.expander(f"🔽 Tampilkan {len(tbl):,} baris · OS Total: {M(total_nom)}", expanded=False):
         st.dataframe(tbl, use_container_width=True, hide_index=True, height=460)
         st.download_button(
             "⬇️ Download CSV (hasil filter)",
@@ -740,11 +630,11 @@ def main():
             mime="text/csv",
         )
 
-    # ── FOOTER ───────────────────────────────────────────────────────────
+    # ── FOOTER ───────────────────────────────────────────────────────
     st.markdown("---")
     st.markdown(
-        f"<p style='text-align:center;color:#C4B8B5;font-size:11px;"
-        f"font-family:DM Mono,monospace'>"
+        f"<p style='text-align:center;color:#A8998F;font-size:11px;"
+        f"font-family:IBM Plex Mono,monospace'>"
         f"AR OTC · PT Pinus Merah Abadi · FAD Team · "
         f"data {last_updated} · render {datetime.now().strftime('%d %b %Y %H:%M')}"
         f"</p>", unsafe_allow_html=True)
