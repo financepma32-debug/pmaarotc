@@ -644,206 +644,287 @@ def page_gt():
         df, last_updated = load_gt()
 
     if df.empty:
-        st.info("""
-        **Data GT belum tersedia.**
-
-        Langkah setup:
-        1. Jalankan SQL berikut di Supabase SQL Editor untuk buat tabel `gt_master` dan `upload_log_gt`
-        2. Buat script `supabase_uploader_gt.py` yang membaca `MASTER_GT_*.csv` dan push ke tabel `gt_master`
-        3. Jalankan `JALANKAN_GT_UPLOAD.bat` dari PC lokal
-        """)
-        with st.expander("📋 SQL Setup GT — klik untuk lihat"):
-            st.code("""
--- Jalankan di Supabase SQL Editor (project pma-arotc, sama dengan OTC)
-
-CREATE TABLE IF NOT EXISTS gt_master (
-    id BIGSERIAL PRIMARY KEY,
-    "Nama Area"               TEXT,
-    "Nama Sales"              TEXT,
-    "Nama Toko"               TEXT,
-    "Kategori Overdue"        TEXT,
-    "Region"                  TEXT,
-    "Jenis Outlet"            TEXT,
-    "Nominal"                 NUMERIC,
-    "Grouping OS"             TEXT,
-    "RBM"                     TEXT,
-    "ASM"                     TEXT,
-    "No Faktur"               TEXT,
-    "No Faktur Scylla"        TEXT,
-    "Tanggal Faktur"          DATE,
-    "Tanggal JT"              DATE,
-    "Nilai Faktur"            NUMERIC,
-    "TOP"                     TEXT,
-    "JENIS KASUS"             TEXT,
-    "KRONOLOGI"               TEXT,
-    "JENIS BA"                TEXT,
-    "NO BA"                   TEXT,
-    "BAP"                     TEXT,
-    "TGL KONFIRMASI"          DATE,
-    "ACTION PLAN"             TEXT,
-    "PENYELESAIAN"            TEXT,
-    "No Faktur SAP"           TEXT,
-    "Tipe Transaksi"          TEXT,
-    "Movement"                NUMERIC,
-    "Saldo Akhir"             NUMERIC,
-    "Tgl Target Pelunasan"    DATE,
-    "BERAPA HARI?"            TEXT,
-    "KELOMPOK"                TEXT,
-    "CURRENT"                 NUMERIC DEFAULT 0,
-    "1-7 DAYS"                NUMERIC DEFAULT 0,
-    "8-30 DAYS"               NUMERIC DEFAULT 0,
-    "31-60 DAYS"              NUMERIC DEFAULT 0,
-    "61-90 DAYS"              NUMERIC DEFAULT 0,
-    "91-120 DAYS"             NUMERIC DEFAULT 0,
-    "121+ DAYS"               NUMERIC DEFAULT 0,
-    "<2026"                   NUMERIC DEFAULT 0,
-    "KELOMPOK2"               TEXT,
-    "OVERDUE"                 NUMERIC DEFAULT 0,
-    "TANGGAL HARI INII"       DATE,
-    "batas 2025"              DATE,
-    "OVERDUE?"                NUMERIC DEFAULT 0,
-    "ACTUAL PELUNASAN"        NUMERIC DEFAULT 0,
-    "TARGET PELUNASAN"        NUMERIC DEFAULT 0,
-    "DUE DATE"                NUMERIC DEFAULT 0,
-    "Qty Faktur"              NUMERIC DEFAULT 0,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS upload_log_gt (
-    id          BIGSERIAL PRIMARY KEY,
-    uploaded_at TIMESTAMPTZ DEFAULT NOW(),
-    total_rows  INTEGER,
-    source      TEXT
-);
-
--- Index
-CREATE INDEX IF NOT EXISTS idx_gt_region  ON gt_master ("Region");
-CREATE INDEX IF NOT EXISTS idx_gt_area    ON gt_master ("Nama Area");
-CREATE INDEX IF NOT EXISTS idx_gt_kelompok ON gt_master ("KELOMPOK");
-
--- RLS
-ALTER TABLE gt_master     ENABLE ROW LEVEL SECURITY;
-ALTER TABLE upload_log_gt ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "public_read_gt"     ON gt_master     FOR SELECT USING (true);
-CREATE POLICY "public_read_log_gt" ON upload_log_gt FOR SELECT USING (true);
-CREATE POLICY "service_insert_gt"  ON gt_master     FOR INSERT TO service_role WITH CHECK (true);
-CREATE POLICY "service_delete_gt"  ON gt_master     FOR DELETE TO service_role USING (true);
-CREATE POLICY "service_log_gt"     ON upload_log_gt FOR INSERT TO service_role WITH CHECK (true);
-
--- RPC truncate
-CREATE OR REPLACE FUNCTION truncate_gt_master()
-RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$
-BEGIN TRUNCATE TABLE gt_master RESTART IDENTITY; END; $$;
-            """, language="sql")
+        st.warning("Belum ada data OTC. Jalankan **JALANKAN_SEMUA.bat** untuk upload data GT.")
         return
 
-    # ── SIDEBAR GT ────────────────────────────────────────────────
-    st.sidebar.markdown("### Filter GT")
-    def sbg(label, col, src):
-        if col not in src.columns: return "Semua"
+    # ── SIDEBAR ───────────────────────────────────────────────────
+    st.sidebar.markdown("### Filter OTC")
+    def sb(label, col, src):
         opts = ["Semua"] + sorted(src[col].dropna().unique().tolist())
         return st.sidebar.selectbox(label, opts, key=f"gt_{col}")
 
-    sel_region = sbg("Region",       "Region",       df)
+    sel_region = sb("Region",       "Region",       df)
     d0 = df if sel_region=="Semua" else df[df["Region"]==sel_region]
-    sel_area   = sbg("Nama Area",    "Nama Area",    d0)
+    sel_area   = sb("Nama Area",    "Nama Area",    d0)
     d1 = d0 if sel_area=="Semua" else d0[d0["Nama Area"]==sel_area]
-    sel_jenis  = sbg("Jenis Outlet", "Jenis Outlet", d1)
-    sel_asm    = sbg("ASM",          "ASM",          d1)
-    sel_rbm    = sbg("RBM",          "RBM",          d1)
+    sel_jenis  = sb("Jenis Outlet", "Jenis Outlet", d1)
+    sel_asm    = sb("ASM",          "ASM",          d1)
+    sel_rbm    = sb("RBM",          "RBM",          d1)
+    sel_grp    = sb("Grouping OS",  "Grouping OS",  d1)
     sel_bkt    = st.sidebar.multiselect("Kelompok Aging", BUCKETS, default=BUCKETS, key="gt_bkt")
     st.sidebar.markdown("---")
     if st.sidebar.button("↺ Refresh GT", use_container_width=True, key="ref_gt"):
         st.cache_data.clear(); st.rerun()
-    st.sidebar.caption(f"Update: {last_updated}")
+    st.sidebar.caption(f"Update GT: {last_updated}")
 
     dff = df.copy()
-    if sel_region!="Semua" and "Region" in dff.columns: dff=dff[dff["Region"]==sel_region]
-    if sel_area  !="Semua" and "Nama Area" in dff.columns: dff=dff[dff["Nama Area"]==sel_area]
-    if sel_jenis !="Semua" and "Jenis Outlet" in dff.columns: dff=dff[dff["Jenis Outlet"]==sel_jenis]
-    if sel_asm   !="Semua" and "ASM" in dff.columns: dff=dff[dff["ASM"]==sel_asm]
-    if sel_rbm   !="Semua" and "RBM" in dff.columns: dff=dff[dff["RBM"]==sel_rbm]
-    if sel_bkt and "KELOMPOK" in dff.columns: dff=dff[dff["KELOMPOK"].isin(sel_bkt)]
+    if sel_region!="Semua": dff=dff[dff["Region"]      ==sel_region]
+    if sel_area  !="Semua": dff=dff[dff["Nama Area"]   ==sel_area]
+    if sel_jenis !="Semua": dff=dff[dff["Jenis Outlet"] ==sel_jenis]
+    if sel_asm   !="Semua": dff=dff[dff["ASM"]         ==sel_asm]
+    if sel_rbm   !="Semua": dff=dff[dff["RBM"]         ==sel_rbm]
+    if sel_grp   !="Semua": dff=dff[dff["Grouping OS"] ==sel_grp]
+    if sel_bkt:              dff=dff[dff["KELOMPOK"].isin(sel_bkt)]
     if dff.empty:
         st.warning("Tidak ada data sesuai filter."); return
 
     pma_header("AR Outstanding GT", last_updated, len(dff))
 
-    # KPI GT
-    tn=dff["Nominal"].sum() if "Nominal" in dff.columns else 0
-    to=dff["OVERDUE"].sum() if "OVERDUE" in dff.columns else 0
-    tc=dff["CURRENT"].sum() if "CURRENT" in dff.columns else 0
-    ta=dff["ACTUAL PELUNASAN"].sum() if "ACTUAL PELUNASAN" in dff.columns else 0
-    tt=dff["TARGET PELUNASAN"].sum() if "TARGET PELUNASAN" in dff.columns else 0
-    tq=int(dff["Qty Faktur"].sum()) if "Qty Faktur" in dff.columns else 0
-    c1,c2,c3,c4,c5,c6=st.columns(6)
-    kpi(c1,"Total Outstanding GT",M(tn),f"Nilai Faktur {M(dff['Nilai Faktur'].sum()) if 'Nilai Faktur' in dff.columns else '–'}")
+    # KPI
+    tn=dff["Nominal"].sum(); to=dff["OVERDUE"].sum(); tc=dff["CURRENT"].sum()
+    ta=dff["ACTUAL PELUNASAN"].sum(); tt=dff["TARGET PELUNASAN"].sum()
+    td=dff["DUE DATE"].sum(); tq=int(dff["Qty Faktur"].sum())
+    c1,c2,c3,c4,c5,c6 = st.columns(6)
+    kpi(c1,"Total Outstanding GT",M(tn),f"Nilai Faktur {M(dff['Nilai Faktur'].sum())}")
     kpi(c2,"Overdue",M(to),P(to,tn)+" dari outstanding")
     kpi(c3,"Current",M(tc),P(tc,tn)+" dari total","green")
     kpi(c4,"% Collection",P(ta,tt),f"Actual {M(ta)} / Target {M(tt)}","gold")
-    kpi(c5,"Jumlah Faktur",f"{len(dff):,}","total baris data","stone")
-    kpi(c6,"Qty Faktur",f"{tq:,}","faktur aktif","orange")
+    kpi(c5,"Due Date Hari Ini",M(td),"Nominal jatuh tempo hari ini","stone")
+    kpi(c6,"Qty Faktur",f"{tq:,}",f"{len(dff):,} baris data","orange")
     st.markdown("<br>",unsafe_allow_html=True)
 
     bv, grand = bucket_strip(dff)
 
-    # SO Block GT — juga 1 tabel
-    sec("STATUS SO BLOCK GT — REKOMENDASI TINDAKAN")
-    if "KELOMPOK" in dff.columns:
-        df_ov_gt = dff[dff["KELOMPOK"]!="CURRENT"].copy()
-        df_ov_gt["SO Status"] = df_ov_gt["KELOMPOK"].map(SO_MAP)
+    # ════ SO BLOCK — 1 TABEL dengan kolom SO Status, Area, Kode Customer, dll ════
+    sec("STATUS SO BLOCK — REKOMENDASI TINDAKAN")
 
-        wn=df_ov_gt[df_ov_gt["SO Status"]=="WARNING SO"]["Nominal"].sum()
-        sn=df_ov_gt[df_ov_gt["SO Status"]=="SOFT BLOCK"]["Nominal"].sum()
-        cn=df_ov_gt[df_ov_gt["SO Status"]=="CRITICAL BLOCK"]["Nominal"].sum()
-        wf=(df_ov_gt["SO Status"]=="WARNING SO").sum()
-        sf=(df_ov_gt["SO Status"]=="SOFT BLOCK").sum()
-        cf=(df_ov_gt["SO Status"]=="CRITICAL BLOCK").sum()
-        wa=df_ov_gt[df_ov_gt["SO Status"]=="WARNING SO"]["Nama Area"].nunique() if "Nama Area" in df_ov_gt.columns else 0
-        sa=df_ov_gt[df_ov_gt["SO Status"]=="SOFT BLOCK"]["Nama Area"].nunique() if "Nama Area" in df_ov_gt.columns else 0
-        ca=df_ov_gt[df_ov_gt["SO Status"]=="CRITICAL BLOCK"]["Nama Area"].nunique() if "Nama Area" in df_ov_gt.columns else 0
+    df_ov = dff[dff["KELOMPOK"]!="CURRENT"].copy()
+    df_ov["SO Status"] = df_ov["KELOMPOK"].map(SO_MAP)
 
-        st.markdown(f"""
-        <div class="so-wrap">
-          <div class="so-card so-warn"><span class="so-badge warn">⚠ Warning SO</span>
-            <p class="so-val">{M(wn)}</p><p class="so-sub">{wf:,} faktur · {wa} area</p>
-            <p class="so-desc">1–7 hari & 8–30 hari</p></div>
-          <div class="so-card so-soft"><span class="so-badge soft">🔶 Soft Block</span>
-            <p class="so-val">{M(sn)}</p><p class="so-sub">{sf:,} faktur · {sa} area</p>
-            <p class="so-desc">31–60 & 61–90 hari</p></div>
-          <div class="so-card so-crit"><span class="so-badge crit">🔴 Critical Block</span>
-            <p class="so-val">{M(cn)}</p><p class="so-sub">{cf:,} faktur · {ca} area</p>
-            <p class="so-desc">91+ hari & &lt;2026</p></div>
-        </div>
-        """, unsafe_allow_html=True)
+    wn = df_ov[df_ov["SO Status"]=="WARNING SO"]["Nominal"].sum()
+    sn = df_ov[df_ov["SO Status"]=="SOFT BLOCK"]["Nominal"].sum()
+    cn = df_ov[df_ov["SO Status"]=="CRITICAL BLOCK"]["Nominal"].sum()
+    wf = (df_ov["SO Status"]=="WARNING SO").sum()
+    sf = (df_ov["SO Status"]=="SOFT BLOCK").sum()
+    cf = (df_ov["SO Status"]=="CRITICAL BLOCK").sum()
+    wa = df_ov[df_ov["SO Status"]=="WARNING SO"]["Nama Area"].nunique()
+    sa = df_ov[df_ov["SO Status"]=="SOFT BLOCK"]["Nama Area"].nunique()
+    ca = df_ov[df_ov["SO Status"]=="CRITICAL BLOCK"]["Nama Area"].nunique()
 
-        # Tabel SO Block GT
-        gt_so_cols = [c for c in ["SO Status","Nama Area","No Faktur SAP","Nama Toko","ASM","RBM","No Faktur","KELOMPOK","Nominal","Nilai Faktur"] if c in df_ov_gt.columns]
-        tbl_gt_so = df_ov_gt[gt_so_cols].copy()
-        qty_gt = tbl_gt_so.groupby("Nama Toko")["No Faktur"].transform("count") if "Nama Toko" in tbl_gt_so.columns else 0
-        tbl_gt_so.insert(len(tbl_gt_so.columns),"Qty Faktur",qty_gt)
-        for c in ["Nominal","Nilai Faktur"]:
-            if c in tbl_gt_so.columns: tbl_gt_so[c]=tbl_gt_so[c].apply(M)
-        tbl_gt_so.rename(columns={"No Faktur SAP":"Kode Customer","KELOMPOK":"Kelompok"},inplace=True)
-        tbl_gt_so.insert(0,"#",range(1,len(tbl_gt_so)+1))
-        st.dataframe(tbl_gt_so, use_container_width=True, hide_index=True, height=380)
-        dl_btn(df_ov_gt[gt_so_cols], "GT_SO_BLOCK_DETAIL", "⬇️ Download SO Block GT")
+    st.markdown(f"""
+    <div class="so-wrap">
+      <div class="so-card so-warn">
+        <span class="so-badge warn">⚠ Warning SO</span>
+        <p class="so-val">{M(wn)}</p>
+        <p class="so-sub">{wf:,} faktur · {wa} area</p>
+        <p class="so-desc">1–7 hari & 8–30 hari — segera follow up</p>
+      </div>
+      <div class="so-card so-soft">
+        <span class="so-badge soft">🔶 Soft Block</span>
+        <p class="so-val">{M(sn)}</p>
+        <p class="so-sub">{sf:,} faktur · {sa} area</p>
+        <p class="so-desc">31–60 & 61–90 hari — hold pengiriman baru</p>
+      </div>
+      <div class="so-card so-crit">
+        <span class="so-badge crit">🔴 Critical Block</span>
+        <p class="so-val">{M(cn)}</p>
+        <p class="so-sub">{cf:,} faktur · {ca} area</p>
+        <p class="so-desc">91+ hari & &lt;2026 — blokir SO, eskalasi manajemen</p>
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
 
-    # Ringkasan per area GT
-    sec("OUTSTANDING GT PER WILAYAH")
-    if "Nama Area" in dff.columns:
-        t_gt_area = (dff.groupby("Nama Area")
-                     .agg(NF=("Nilai Faktur","sum"),Cur=("CURRENT","sum"),Ov=("OVERDUE","sum"))
-                     .reset_index().sort_values("NF",ascending=False))
-        t_gt_area["%C/OD"]=t_gt_area.apply(lambda r: P(r["Cur"],r["Cur"]+r["Ov"]),axis=1)
-        for c in ["NF","Cur","Ov"]: t_gt_area[c]=t_gt_area[c].apply(M)
-        t_gt_area.columns=["Nama Area","Nilai Faktur","Current","Overdue","%Curr/OD"]
-        st.dataframe(t_gt_area, use_container_width=True, hide_index=True, height=360)
-        dl_btn(t_gt_area, "GT_OUTSTANDING_PER_AREA")
+    # SATU TABEL SO BLOCK — kolom: Status | Area | Nama Toko | ASM | RBM | No Faktur | Qty | Nilai Faktur
+    # Kode Customer = No Faktur SAP (identitas customer di SAP)
+    so_cols_src = {
+        "SO Status":     "SO Status",
+        "Nama Area":     "Nama Area",
+        "Kode Customer": "No Faktur SAP",
+        "Nama Toko":     "Nama Toko",
+        "ASM":           "ASM",
+        "RBM":           "RBM",
+        "No Faktur":     "No Faktur",
+        "Kelompok":      "KELOMPOK",
+    }
+    tbl_so = df_ov.copy()
+    # Qty faktur per toko per SO Status — dibangun dari groupby
+    so_out_cols = ["SO Status","Nama Area","No Faktur SAP","Nama Toko","ASM","RBM",
+                   "No Faktur","KELOMPOK","Nominal","Nilai Faktur"]
+    so_out_cols = [c for c in so_out_cols if c in tbl_so.columns]
+    tbl_so = tbl_so[so_out_cols].copy()
+
+    # Tambah kolom Qty Faktur per Nama Toko
+    qty_map = tbl_so.groupby("Nama Toko")["No Faktur"].transform("count") if "Nama Toko" in tbl_so.columns else 0
+    tbl_so.insert(tbl_so.columns.get_loc("No Faktur")+1 if "No Faktur" in tbl_so.columns else len(tbl_so.columns),
+                  "Qty Faktur", qty_map)
+
+    # Format angka
+    for c in ["Nominal","Nilai Faktur"]:
+        if c in tbl_so.columns: tbl_so[c] = tbl_so[c].apply(M)
+
+    # Rename kolom akhir
+    rename_map = {
+        "SO Status":"SO Status","Nama Area":"Nama Area","No Faktur SAP":"Kode Customer",
+        "Nama Toko":"Nama Toko","ASM":"ASM","RBM":"RBM",
+        "No Faktur":"No Faktur","Qty Faktur":"Qty Faktur",
+        "Nominal":"Nilai OS","Nilai Faktur":"Nilai Faktur","KELOMPOK":"Kelompok",
+    }
+    tbl_so.rename(columns=rename_map, inplace=True)
+    tbl_so.insert(0,"#",range(1,len(tbl_so)+1))
+
+    # Urutkan: Critical dulu, lalu Soft Block, lalu Warning SO
+    order = {"CRITICAL BLOCK":0,"SOFT BLOCK":1,"WARNING SO":2}
+    if "SO Status" in tbl_so.columns:
+        tbl_so["_ord"] = tbl_so["SO Status"].map(order).fillna(3)
+        tbl_so = tbl_so.sort_values("_ord").drop(columns="_ord")
+
+    st.dataframe(tbl_so, use_container_width=True, hide_index=True, height=400)
+    dl_btn(df_ov[so_out_cols], "GT_SO_BLOCK_DETAIL", "⬇️ Download SO Block GT")
+
+    # Chart distribusi SO Block per area (top 10)
+    sec("DISTRIBUSI SO BLOCK PER NAMA AREA")
+    pivot = (df_ov.groupby(["Nama Area","SO Status"])["Nominal"]
+             .sum().unstack(fill_value=0).reset_index())
+    for k in ["WARNING SO","SOFT BLOCK","CRITICAL BLOCK"]:
+        if k not in pivot.columns: pivot[k]=0
+    pivot["TOTAL"] = pivot[["WARNING SO","SOFT BLOCK","CRITICAL BLOCK"]].sum(axis=1)
+    pivot = pivot.nlargest(10,"TOTAL")
+    fig_so = go.Figure()
+    for col_key,color,name in [
+        ("CRITICAL BLOCK","#C8192E","🔴 Critical Block"),
+        ("SOFT BLOCK","#E65C00","🔶 Soft Block"),
+        ("WARNING SO","#F5A623","⚠ Warning SO"),
+    ]:
+        if col_key in pivot.columns:
+            fig_so.add_trace(go.Bar(
+                name=name, x=pivot["Nama Area"], y=pivot[col_key],
+                marker_color=color,
+                text=pivot[col_key].apply(lambda v: M(v) if v>0 else ""),
+                textposition="inside", textfont=dict(size=9,color="#fff"),
+            ))
+    plot_base(fig_so, h=340)
+    fig_so.update_layout(barmode="stack",showlegend=True,
+        legend=dict(orientation="h",x=0,y=1.06,font_size=11),
+        xaxis_tickangle=-30,yaxis_tickformat=",")
+    st.plotly_chart(fig_so, use_container_width=True)
+
+    # ════ KOMPOSISI ════
+    sec("KOMPOSISI OUTSTANDING")
+    ca2,cb2 = st.columns([5,4])
+    with ca2:
+        grp_os = (dff[dff["Nominal"]>0].groupby("Grouping OS")["Nominal"]
+                  .sum().sort_values().reset_index())
+        grp_os.columns = ["Kategori","Nominal"]
+        fig_h = go.Figure(go.Bar(
+            x=grp_os["Nominal"], y=grp_os["Kategori"], orientation="h",
+            marker_color=CHART_PALETTE[:len(grp_os)],
+            text=[M(v) for v in grp_os["Nominal"]],
+            textposition="outside", textfont=dict(size=10,color="#1E1E1E"),
+        ))
+        plot_base(fig_h, h=300); fig_h.update_layout(xaxis_tickformat=",")
+        st.plotly_chart(fig_h, use_container_width=True)
+    with cb2:
+        pl=[b for b in BUCKETS if bv[b]>0]
+        pv=[bv[b] for b in BUCKETS if bv[b]>0]
+        pc=[BUCKET_COLOR[b] for b in BUCKETS if bv[b]>0]
+        fig_pie = go.Figure(go.Pie(labels=pl,values=pv,marker_colors=pc,hole=0.55,
+            textinfo="percent",textfont_size=11,
+            hovertemplate="%{label}: %{value:,.0f}<extra></extra>"))
+        fig_pie.update_layout(paper_bgcolor="rgba(0,0,0,0)",plot_bgcolor="rgba(0,0,0,0)",
+            height=300,margin=dict(t=12,b=12,l=0,r=0),showlegend=True,
+            legend=dict(font_size=10,x=1.01,y=0.5,xanchor="left"),
+            annotations=[dict(text=f"<b>{M(grand)}</b><br><span style='font-size:9px'>Total OS</span>",
+                x=0.5,y=0.5,showarrow=False,font=dict(size=14,color="#1E1E1E"))])
+        st.plotly_chart(fig_pie, use_container_width=True)
+
+    # ════ WILAYAH & KATEGORI ════
+    sec("OUTSTANDING PER WILAYAH & KATEGORI")
+    cc2,cd2 = st.columns(2)
+    with cc2:
+        st.caption("**Per Nama Area**")
+        t_area = (dff.groupby("Nama Area")
+                  .agg(NF=("Nilai Faktur","sum"),Cur=("CURRENT","sum"),Ov=("OVERDUE","sum"))
+                  .reset_index().sort_values("NF",ascending=False))
+        t_area["% C/OD"]=t_area.apply(lambda r: P(r["Cur"],r["Cur"]+r["Ov"]),axis=1)
+        for c in ["NF","Cur","Ov"]: t_area[c]=t_area[c].apply(M)
+        t_area.columns=["Nama Area","Nilai Faktur","Current","Overdue","% Curr/OD"]
+        st.dataframe(t_area,use_container_width=True,hide_index=True,height=320)
+    with cd2:
+        st.caption("**Per Kategori Overdue**")
+        t_kat=(dff[dff["Nominal"]>0].groupby("Kategori Overdue")
+               .agg(Nominal=("Nominal","sum"),Faktur=("No Faktur","count"))
+               .reset_index().sort_values("Nominal",ascending=False))
+        t_kat["%"]=t_kat["Nominal"].apply(lambda v: P(v,tn))
+        t_kat["Nominal"]=t_kat["Nominal"].apply(R)
+        t_kat.columns=["Kategori Overdue","Nominal","Jml Faktur","%"]
+        st.dataframe(t_kat,use_container_width=True,hide_index=True,height=320)
+    dw1,dw2=st.columns(2)
+    with dw1: dl_btn(dff.groupby("Nama Area").agg(NF=("Nilai Faktur","sum"),Cur=("CURRENT","sum"),Ov=("OVERDUE","sum")).reset_index(),"GT_OUTSTANDING_PER_AREA")
+    with dw2: dl_btn(dff[dff["Nominal"]>0].groupby("Kategori Overdue").agg(Nominal=("Nominal","sum"),Faktur=("No Faktur","count")).reset_index(),"GT_OUTSTANDING_PER_KATEGORI")
+
+    # ════ COLLECTION ════
+    sec("COLLECTION — ACTUAL vs TARGET PELUNASAN")
+    ce2,cf2=st.columns([5,4])
+    with ce2:
+        t_coll=(dff.groupby("Nama Area").agg(Actual=("ACTUAL PELUNASAN","sum"),Target=("TARGET PELUNASAN","sum")).reset_index())
+        t_coll=t_coll[t_coll["Target"]>0].nlargest(12,"Target")
+        fig_c=go.Figure()
+        fig_c.add_trace(go.Bar(name="Target",x=t_coll["Nama Area"],y=t_coll["Target"],marker_color="#D0C8BE",text=[M(v) for v in t_coll["Target"]],textposition="outside",textfont=dict(size=9,color="#555")))
+        fig_c.add_trace(go.Bar(name="Actual",x=t_coll["Nama Area"],y=t_coll["Actual"],marker_color="#C8192E",text=[M(v) for v in t_coll["Actual"]],textposition="outside",textfont=dict(size=9,color="#C8192E")))
+        plot_base(fig_c,h=320)
+        fig_c.update_layout(barmode="group",showlegend=True,legend=dict(orientation="h",x=0,y=1.08,font_size=11),xaxis_tickangle=-30,yaxis_tickformat=",")
+        st.plotly_chart(fig_c,use_container_width=True)
+    with cf2:
+        st.caption("**Collection Rate per ASM**")
+        t_asm=(dff.groupby("ASM").agg(Actual=("ACTUAL PELUNASAN","sum"),Target=("TARGET PELUNASAN","sum"),OS=("Nominal","sum")).reset_index())
+        t_asm=t_asm[t_asm["Target"]>0].sort_values("Target",ascending=False)
+        t_asm["%Coll"]=t_asm.apply(lambda r: P(r["Actual"],r["Target"]),axis=1)
+        for c in ["Actual","Target","OS"]: t_asm[c]=t_asm[c].apply(M)
+        t_asm.columns=["ASM","Actual","Target","Outstanding","% Coll"]
+        st.dataframe(t_asm,use_container_width=True,hide_index=True,height=320)
+    dc1,dc2=st.columns(2)
+    with dc1: dl_btn(dff.groupby("Nama Area").agg(Actual=("ACTUAL PELUNASAN","sum"),Target=("TARGET PELUNASAN","sum")).reset_index(),"GT_COLLECTION_PER_AREA")
+    with dc2: dl_btn(dff.groupby("ASM").agg(Actual=("ACTUAL PELUNASAN","sum"),Target=("TARGET PELUNASAN","sum"),OS=("Nominal","sum")).reset_index(),"GT_COLLECTION_PER_ASM")
+
+    # ════ OUTLET & RBM ════
+    sec("BREAKDOWN JENIS OUTLET & RBM")
+    cg2,ch2=st.columns([4,5])
+    with cg2:
+        t_out=(dff.groupby("Jenis Outlet").agg(OS=("Nominal","sum"),OV=("OVERDUE","sum")).reset_index().sort_values("OS",ascending=False).head(12))
+        t_out["%OD"]=t_out.apply(lambda r: P(r["OV"],r["OS"]),axis=1)
+        for c in ["OS","OV"]: t_out[c]=t_out[c].apply(M)
+        t_out.columns=["Jenis Outlet","Outstanding","Overdue","%OD"]
+        st.dataframe(t_out,use_container_width=True,hide_index=True,height=320)
+    with ch2:
+        t_rbm=(dff.groupby("RBM").agg(OS=("Nominal","sum"),OV=("OVERDUE","sum"),Akt=("ACTUAL PELUNASAN","sum"),Tgt=("TARGET PELUNASAN","sum")).reset_index().sort_values("OS",ascending=False))
+        t_rbm["%OD"]=t_rbm.apply(lambda r: P(r["OV"],r["OS"]),axis=1)
+        t_rbm["%Coll"]=t_rbm.apply(lambda r: P(r["Akt"],r["Tgt"]),axis=1)
+        for c in ["OS","OV","Akt","Tgt"]: t_rbm[c]=t_rbm[c].apply(M)
+        t_rbm.columns=["RBM","Outstanding","Overdue","Actual Pel.","Target Pel.","%OD","%Coll"]
+        st.dataframe(t_rbm,use_container_width=True,hide_index=True,height=320)
+    do1,do2=st.columns(2)
+    with do1: dl_btn(dff.groupby("Jenis Outlet").agg(OS=("Nominal","sum"),OV=("OVERDUE","sum")).reset_index(),"GT_BREAKDOWN_OUTLET")
+    with do2: dl_btn(dff.groupby("RBM").agg(OS=("Nominal","sum"),OV=("OVERDUE","sum"),Akt=("ACTUAL PELUNASAN","sum"),Tgt=("TARGET PELUNASAN","sum")).reset_index(),"GT_BREAKDOWN_RBM")
+
+    # ════ DETAIL FAKTUR ════
+    ovrd_ct=int((dff["OVERDUE?"]>0).sum())
+    sec(f"DETAIL FAKTUR — {ovrd_ct:,} FAKTUR OVERDUE")
+    COLS=["Nama Area","RBM","ASM","Nama Sales","Nama Toko","No Faktur","Tanggal Faktur","Tanggal JT","Nilai Faktur","Saldo Akhir","KELOMPOK","OVERDUE?","Grouping OS"]
+    cols_ok=[c for c in COLS if c in dff.columns]
+    tbl=dff[cols_ok].copy()
+    if "Tanggal Faktur" in tbl.columns: tbl["Tanggal Faktur"]=tbl["Tanggal Faktur"].dt.strftime("%d %b %Y")
+    if "Tanggal JT" in tbl.columns: tbl["Tanggal JT"]=tbl["Tanggal JT"].dt.strftime("%d %b %Y")
+    for c in ["Nilai Faktur","Saldo Akhir"]:
+        if c in tbl.columns: tbl[c]=tbl[c].apply(R)
+    tbl.rename(columns={"Nama Area":"Nama Area","Nama Sales":"Nama Sales","Nama Toko":"Nama Toko","Saldo Akhir":"Sisa AR","OVERDUE?":"Hari OD","KELOMPOK":"Kelompok","Grouping OS":"Grouping OS"},inplace=True)
+    tbl.insert(0,"#",range(1,len(tbl)+1))
+    with st.expander(f"🔽 Tampilkan {len(tbl):,} baris · OS Total: {M(tn)}",expanded=False):
+        st.dataframe(tbl,use_container_width=True,hide_index=True,height=440)
+        dl_btn(dff[cols_ok],"GT_DETAIL","⬇️ Download Detail Faktur GT")
 
 # ════════════════════════════════════════════════════════════════════
-# MAIN — Tab navigasi
-# ════════════════════════════════════════════════════════════════════
+
+
 def main():
     tab1, tab2 = st.tabs(["📋  AR OTC — MTI NKA", "📊  AR GT"])
     with tab1:
