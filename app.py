@@ -25,7 +25,7 @@ html, body, [class*="css"] { font-family:'Inter',sans-serif; }
 [data-testid="stAppViewContainer"] { background:#F2EDE6; }
 [data-testid="stSidebar"]          { background:#FFFFFF; border-right:1px solid #DDD5CC; }
 [data-testid="stSidebar"] *        { font-size:13px; color:#1E1E1E; }
-.block-container { padding:0.8rem 1.6rem 2rem !important; max-width:100% !important; }
+.block-container { padding:3.5rem 1.6rem 2rem !important; max-width:100% !important; }
 
 /* ═══ HEADER FIX — tidak terpotong, judul bisa wrap ═══ */
 .pma-header {
