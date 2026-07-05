@@ -12,118 +12,337 @@ from datetime import datetime
 
 st.set_page_config(
     page_title="AR Dashboard — PMA FAD",
-    page_icon="🔴",
+    page_icon=None,
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
 
-html, body, [class*="css"] { font-family:'Inter',sans-serif; }
-[data-testid="stAppViewContainer"] { background:#F2EDE6; }
-[data-testid="stSidebar"]          { background:#FFFFFF; border-right:1px solid #DDD5CC; }
-[data-testid="stSidebar"] *        { font-size:13px; color:#1E1E1E; }
-.block-container { padding:3.5rem 1.6rem 2rem !important; max-width:100% !important; }
+/* ── Reset & Base ─────────────────────────────────── */
+html, body, [class*="css"]  { font-family: 'Inter', sans-serif; }
+* { box-sizing: border-box; }
 
-/* ═══ HEADER FIX — tidak terpotong, judul bisa wrap ═══ */
+[data-testid="stAppViewContainer"] { background: #FFFFFF; }
+[data-testid="stSidebar"] {
+    background: #FAFAFA;
+    border-right: 1px solid #ECECEC;
+}
+[data-testid="stSidebar"] * { font-size: 13px; color: #374151; }
+[data-testid="stSidebar"] .stSelectbox label,
+[data-testid="stSidebar"] .stMultiSelect label { font-size: 11px; color: #9CA3AF; font-weight: 500; text-transform: uppercase; letter-spacing: .6px; }
+
+.block-container { padding: 3.5rem 2.4rem 3rem !important; max-width: 100% !important; }
+
+/* ── Header ───────────────────────────────────────── */
 .pma-header {
-    background: linear-gradient(120deg, #C8192E 0%, #8C0A1C 100%);
-    border-radius: 10px;
-    padding: 14px 20px;
+    background: #B01C2E;
+    border-radius: 16px;
+    padding: 20px 28px;
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 14px;
-    box-shadow: 0 4px 14px rgba(180,15,40,.28);
-    box-sizing: border-box;
+    gap: 16px;
+    margin-bottom: 20px;
     width: 100%;
 }
-.pma-hl { flex:1; min-width:0; }
+.pma-hl { flex: 1; min-width: 0; }
 .pma-title {
-    color:#fff; font-size:17px; font-weight:700; margin:0;
-    line-height:1.35;
-    /* wrap, tidak dipotong sama sekali */
-    white-space:normal !important;
-    overflow:visible !important;
-    text-overflow:unset !important;
-    word-break:normal;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0;
+    letter-spacing: -.2px;
+    white-space: normal !important;
+    overflow: visible !important;
 }
-.pma-sub  { color:rgba(255,255,255,.68); font-size:11px; margin:3px 0 0; }
+.pma-sub { color: rgba(255,255,255,.55); font-size: 12px; margin: 4px 0 0; font-weight: 400; }
 .pma-date {
-    color:#fff; font-size:12px; font-weight:600;
-    background:rgba(255,255,255,.18); border-radius:6px;
-    padding:5px 12px; font-family:'IBM Plex Mono',monospace;
-    white-space:nowrap; flex-shrink:0; align-self:center;
+    color: rgba(255,255,255,.90);
+    font-size: 13px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
-/* ═══ UPDATE BAR ═══ */
+/* ── Meta bar (update + count) ────────────────────── */
 .upd-bar {
-    background:#EAE2D8; border-radius:6px; padding:7px 14px;
-    font-size:11px; color:#6B5E57;
-    display:flex; justify-content:space-between; margin-bottom:14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11.5px;
+    color: #9CA3AF;
+    margin-bottom: 24px;
+    padding: 0 2px;
+}
+.upd-bar strong { color: #374151; font-weight: 600; }
+
+/* ── KPI Cards ────────────────────────────────────── */
+.kpi-grid { display: flex; gap: 16px; margin-bottom: 28px; }
+.kpi {
+    flex: 1;
+    background: #FFFFFF;
+    border: 1px solid #ECECEC;
+    border-radius: 16px;
+    padding: 20px 20px 18px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.04), 0 1px 2px rgba(0,0,0,.03);
+    position: relative;
+    overflow: hidden;
+    min-height: 100px;
+}
+.kpi::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: #ECECEC;
+    border-radius: 16px 16px 0 0;
+}
+.kpi.accent-red::before   { background: #B01C2E; }
+.kpi.accent-green::before { background: #059669; }
+.kpi.accent-amber::before { background: #D97706; }
+.kpi.accent-blue::before  { background: #2563EB; }
+.kpi.accent-slate::before { background: #64748B; }
+
+.kpi-icon {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 14px;
+}
+.kpi-icon.red   { background: #FEF2F2; }
+.kpi-icon.green { background: #ECFDF5; }
+.kpi-icon.amber { background: #FFFBEB; }
+.kpi-icon.blue  { background: #EFF6FF; }
+.kpi-icon.slate { background: #F8FAFC; }
+
+.kpi-icon svg { width: 16px; height: 16px; }
+
+.kpi-lbl {
+    font-size: 11px;
+    font-weight: 500;
+    color: #9CA3AF;
+    text-transform: uppercase;
+    letter-spacing: .7px;
+    margin: 0 0 6px;
+    display: block;
+}
+.kpi-val {
+    font-size: 24px;
+    font-weight: 700;
+    color: #111827;
+    line-height: 1;
+    margin: 0 0 6px;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -.5px;
+}
+.kpi-sub {
+    font-size: 11.5px;
+    color: #9CA3AF;
+    margin: 0;
+    line-height: 1.4;
 }
 
-/* ═══ KPI CARDS ═══ */
-.kpi { background:#fff; border-radius:8px; padding:14px 12px 12px;
-       border-left:4px solid #C8192E;
-       box-shadow:0 1px 4px rgba(0,0,0,.07); min-height:82px; }
-.kpi.green  { border-left-color:#0F9D58; }
-.kpi.gold   { border-left-color:#E8A000; }
-.kpi.orange { border-left-color:#E65C00; }
-.kpi.stone  { border-left-color:#7B6E66; }
-.kpi-lbl { font-size:9.5px; font-weight:700; color:#8C7B72; text-transform:uppercase; letter-spacing:.9px; margin:0; }
-.kpi-val { font-size:20px; font-weight:700; color:#1E1E1E; font-family:'IBM Plex Mono',monospace; margin:5px 0 2px; line-height:1; }
-.kpi-sub { font-size:10px; color:#A0908A; margin:0; }
+/* ── Aging Bucket Strip ───────────────────────────── */
+.bk-strip {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 32px;
+    padding: 0;
+}
+.bk-cell {
+    flex: 1;
+    background: #FFFFFF;
+    border: 1px solid #ECECEC;
+    border-radius: 12px;
+    padding: 14px 12px 12px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+.bk-cell::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 2px;
+    border-radius: 0 0 12px 12px;
+}
+.bk-lbl {
+    font-size: 9px;
+    font-weight: 600;
+    color: #9CA3AF;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    margin: 0 0 6px;
+    display: block;
+}
+.bk-val {
+    font-size: 13px;
+    font-weight: 700;
+    color: #111827;
+    font-variant-numeric: tabular-nums;
+    display: block;
+}
+.bk-total {
+    background: #111827;
+    border-color: #111827;
+}
+.bk-total .bk-lbl { color: rgba(255,255,255,.5); }
+.bk-total .bk-val  { color: #FFFFFF; }
 
-/* ═══ BUCKET STRIP ═══ */
-.bk-strip { display:flex; gap:5px; margin-bottom:18px; }
-.bk-cell { flex:1; background:#fff; border-radius:6px; padding:9px 6px;
-           text-align:center; border-top:3px solid #DDD5CC;
-           box-shadow:0 1px 3px rgba(0,0,0,.06); }
-.bk-lbl { font-size:8.5px; font-weight:700; color:#8C7B72; text-transform:uppercase; letter-spacing:.4px; margin:0; }
-.bk-val { font-size:12.5px; font-weight:700; color:#1E1E1E; font-family:'IBM Plex Mono',monospace; margin:3px 0 0; }
+/* ── SO Block Cards ───────────────────────────────── */
+.so-wrap { display: flex; gap: 16px; margin-bottom: 20px; }
+.so-card {
+    flex: 1;
+    background: #FFFFFF;
+    border: 1px solid #ECECEC;
+    border-radius: 16px;
+    padding: 20px 20px 18px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.04);
+}
+.so-card.warn { border-top: 3px solid #D97706; }
+.so-card.soft { border-top: 3px solid #EA580C; }
+.so-card.crit { border-top: 3px solid #B01C2E; }
 
-/* ═══ SO BLOCK CARDS ═══ */
-.so-wrap { display:flex; gap:12px; margin-bottom:12px; }
-.so-card { flex:1; border-radius:10px; padding:16px 16px 13px; box-shadow:0 2px 8px rgba(0,0,0,.09); }
-.so-warn { background:#FFFBF0; border-left:5px solid #F5A623; }
-.so-soft { background:#FFF4EE; border-left:5px solid #E65C00; }
-.so-crit { background:#FFF0F2; border-left:5px solid #C8192E; }
-.so-badge { display:inline-block; font-size:9px; font-weight:700; border-radius:4px;
-            padding:3px 8px; letter-spacing:.6px; text-transform:uppercase; margin-bottom:6px; }
-.so-badge.warn { background:#F5A623; color:#fff; }
-.so-badge.soft { background:#E65C00; color:#fff; }
-.so-badge.crit { background:#C8192E; color:#fff; }
-.so-val  { font-size:26px; font-weight:700; font-family:'IBM Plex Mono',monospace; color:#1E1E1E; margin:0; line-height:1.1; }
-.so-sub  { font-size:11px; color:#6B5E57; margin:4px 0 0; }
-.so-desc { font-size:10px; color:#9A8A82; margin:5px 0 0; font-style:italic; }
+.so-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    border-radius: 6px;
+    padding: 3px 8px;
+    margin-bottom: 12px;
+}
+.so-tag.warn { background: #FFFBEB; color: #92400E; }
+.so-tag.soft { background: #FFF7ED; color: #9A3412; }
+.so-tag.crit { background: #FEF2F2; color: #991B1B; }
 
-/* ═══ SECTION TITLE ═══ */
-.sec { font-size:10.5px; font-weight:700; color:#C8192E; text-transform:uppercase;
-       letter-spacing:1.2px; margin:22px 0 8px;
-       padding-bottom:5px; border-bottom:1.5px solid #DDD5CC; }
+.so-tag-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    display: inline-block;
+}
+.so-tag.warn .so-tag-dot { background: #D97706; }
+.so-tag.soft .so-tag-dot { background: #EA580C; }
+.so-tag.crit .so-tag-dot { background: #B01C2E; }
 
-/* ═══ TABLE ═══ */
+.so-val {
+    font-size: 28px;
+    font-weight: 700;
+    color: #111827;
+    margin: 0 0 6px;
+    letter-spacing: -.5px;
+    font-variant-numeric: tabular-nums;
+}
+.so-sub  { font-size: 12px; color: #6B7280; margin: 0 0 6px; }
+.so-desc { font-size: 11px; color: #9CA3AF; margin: 0; }
+
+/* ── Section Title ────────────────────────────────── */
+.sec {
+    font-size: 11px;
+    font-weight: 600;
+    color: #374151;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: 32px 0 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #F3F4F6;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.sec::before {
+    content: '';
+    width: 3px; height: 14px;
+    background: #B01C2E;
+    border-radius: 2px;
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+/* ── Tables ───────────────────────────────────────── */
+[data-testid="stDataFrame"] {
+    border: 1px solid #F3F4F6 !important;
+    border-radius: 12px !important;
+    overflow: hidden !important;
+}
 [data-testid="stDataFrame"] thead th {
-    background:#EDE5DC !important; color:#1E1E1E !important;
-    font-size:11px !important; font-weight:700 !important;
-    text-transform:uppercase !important; letter-spacing:.4px !important;
+    background: #F9FAFB !important;
+    color: #6B7280 !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: .5px !important;
+    border-bottom: 1px solid #F3F4F6 !important;
 }
-[data-testid="stDataFrame"] tbody td { font-size:12px !important; color:#333 !important; }
+[data-testid="stDataFrame"] tbody td {
+    font-size: 12.5px !important;
+    color: #374151 !important;
+    border-bottom: 1px solid #F9FAFB !important;
+}
 
-/* ═══ TAB MENU ═══ */
+/* ── Tabs ─────────────────────────────────────────── */
 [data-testid="stTabs"] [data-baseweb="tab-list"] {
-    gap: 4px; border-bottom: 2px solid #DDD5CC; padding-bottom:0;
+    gap: 0;
+    border-bottom: 1px solid #ECECEC;
+    background: transparent;
+    padding: 0;
 }
 [data-testid="stTabs"] [data-baseweb="tab"] {
-    font-size:13px; font-weight:600; padding:8px 20px;
-    border-radius:8px 8px 0 0; color:#8C7B72;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 10px 20px;
+    border-radius: 0;
+    color: #9CA3AF;
+    background: transparent;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
 }
 [data-testid="stTabs"] [aria-selected="true"] {
-    background:#C8192E !important; color:#fff !important;
+    color: #111827 !important;
+    font-weight: 600 !important;
+    background: transparent !important;
+    border-bottom: 2px solid #B01C2E !important;
+}
+
+/* ── Sidebar buttons & controls ──────────────────── */
+[data-testid="stSidebar"] .stButton button {
+    background: #111827;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 8px 0;
+}
+[data-testid="stSidebar"] .stButton button:hover {
+    background: #1F2937;
+}
+
+/* ── Expander ─────────────────────────────────────── */
+[data-testid="stExpander"] {
+    border: 1px solid #ECECEC !important;
+    border-radius: 12px !important;
+    background: #FFFFFF !important;
+}
+
+/* ── Download button ──────────────────────────────── */
+[data-testid="stDownloadButton"] button {
+    background: #FFFFFF !important;
+    border: 1px solid #ECECEC !important;
+    color: #374151 !important;
+    border-radius: 8px !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+}
+[data-testid="stDownloadButton"] button:hover {
+    border-color: #B01C2E !important;
+    color: #B01C2E !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -302,18 +521,43 @@ def plot_base(fig, h=300, margin=None):
     )
     return fig
 
-def sec(t): st.markdown(f"<p class='sec'>{t}</p>", unsafe_allow_html=True)
+def sec(t): st.markdown(f"<div class='sec'>{t}</div>", unsafe_allow_html=True)
+
+
+# KPI icon registry — pure SVG, no emoji
+_KPI_ICONS = {
+    "outstanding": '''<svg viewBox="0 0 24 24" fill="none" stroke="#B01C2E" stroke-width="1.8" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z"/></svg>''',
+    "overdue":     '''<svg viewBox="0 0 24 24" fill="none" stroke="#B01C2E" stroke-width="1.8" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>''',
+    "current":     '''<svg viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="1.8" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>''',
+    "collection":  '''<svg viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="1.8" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941"/></svg>''',
+    "duedate":     '''<svg viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="1.8" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/></svg>''',
+    "qty":         '''<svg viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="1.8" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z"/></svg>''',
+}
+
+_KPI_META = {
+    # cls        → (accent, icon_key, icon_color_cls)
+    "":          ("accent-red",   "outstanding", "red"),
+    "green":     ("accent-green", "current",     "green"),
+    "gold":      ("accent-amber", "collection",  "amber"),
+    "stone":     ("accent-blue",  "duedate",     "blue"),
+    "orange":    ("accent-slate", "qty",         "slate"),
+    "overdue":   ("accent-red",   "overdue",     "red"),
+}
 
 def kpi(co, label, val, sub="", cls=""):
+    accent, icon_key, icon_cls = _KPI_META.get(cls, ("accent-red","outstanding","red"))
+    icon_svg = _KPI_ICONS.get(icon_key, _KPI_ICONS["outstanding"])
     with co:
         st.markdown(
-            f"<div class='kpi {cls}'>"
-            f"<p class='kpi-lbl'>{label}</p>"
-            f"<p class='kpi-val'>{val}</p>"
-            f"<p class='kpi-sub'>{sub}</p>"
+            f"<div class='kpi {accent}'>"
+            f"<div class='kpi-icon {icon_cls}'>{icon_svg}</div>"
+            f"<span class='kpi-lbl'>{label}</span>"
+            f"<div class='kpi-val'>{val}</div>"
+            f"<div class='kpi-sub'>{sub}</div>"
             f"</div>", unsafe_allow_html=True)
 
-def dl_btn(df_export, filename, label="⬇️ Download CSV"):
+
+def dl_btn(df_export, filename, label="Download CSV"):
     csv = df_export.to_csv(index=False,sep=";",encoding="utf-8-sig").encode("utf-8-sig")
     st.download_button(label, data=csv,
                        file_name=f"{filename}_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
@@ -323,14 +567,17 @@ def bucket_strip(dff):
     bv = {b: dff[b].sum() if b in dff.columns else 0 for b in BUCKETS}
     grand = sum(bv.values())
     cells = "".join([
-        f"<div class='bk-cell' style='border-top-color:{BUCKET_COLOR[b]}'>"
-        f"<p class='bk-lbl'>{b}</p><p class='bk-val'>{M(bv[b])}</p></div>"
+        f"<div class='bk-cell' style='--bk-accent:{BUCKET_COLOR[b]}'>"
+        f"<span class='bk-lbl'>{b}</span>"
+        f"<span class='bk-val'>{M(bv[b])}</span>"
+        f"<style>.bk-cell[style*='{BUCKET_COLOR[b]}']::after{{background:{BUCKET_COLOR[b]};}}</style>"
+        f"</div>"
         for b in BUCKETS
     ])
     cells += (
-        "<div class='bk-cell' style='border-top-color:#1E1E1E;background:#1E1E1E'>"
-        f"<p class='bk-lbl' style='color:#CCC'>TOTAL</p>"
-        f"<p class='bk-val' style='color:#fff'>{M(grand)}</p></div>"
+        f"<div class='bk-cell bk-total'>"
+        f"<span class='bk-lbl'>Total</span>"
+        f"<span class='bk-val'>{M(grand)}</span></div>"
     )
     st.markdown(f"<div class='bk-strip'>{cells}</div>", unsafe_allow_html=True)
     return bv, grand
@@ -345,7 +592,7 @@ def pma_header(title, last_updated, n_faktur):
       <span class="pma-date">{datetime.now().strftime('%d %b %Y')}</span>
     </div>
     <div class="upd-bar">
-      <span>⏱ Update terakhir: <strong>{last_updated}</strong></span>
+      <span>Update terakhir: <strong>{last_updated}</strong></span>
       <span>{n_faktur:,} faktur ditampilkan</span>
     </div>
     """, unsafe_allow_html=True)
@@ -379,7 +626,7 @@ def page_otc():
     st.sidebar.markdown("---")
     if st.sidebar.button("↺ Refresh OTC", use_container_width=True, key="ref_otc"):
         st.cache_data.clear(); st.rerun()
-    st.sidebar.caption(f"Update: {last_updated}")
+    st.sidebar.caption(f"Terakhir diperbarui: {last_updated}")
 
     dff = df.copy()
     if sel_region!="Semua": dff=dff[dff["REGION"]      ==sel_region]
@@ -427,20 +674,20 @@ def page_otc():
 
     st.markdown(f"""
     <div class="so-wrap">
-      <div class="so-card so-warn">
-        <span class="so-badge warn">⚠ Warning SO</span>
+      <div class="so-card warn">
+        <span class="so-tag warn"><span class="so-tag-dot"></span>Warning SO</span>
         <p class="so-val">{M(wn)}</p>
         <p class="so-sub">{wf:,} faktur · {wa} area</p>
         <p class="so-desc">1–7 hari & 8–30 hari — segera follow up</p>
       </div>
-      <div class="so-card so-soft">
-        <span class="so-badge soft">🔶 Soft Block</span>
+      <div class="so-card soft">
+        <span class="so-tag soft"><span class="so-tag-dot"></span>Soft Block</span>
         <p class="so-val">{M(sn)}</p>
         <p class="so-sub">{sf:,} faktur · {sa} area</p>
         <p class="so-desc">31–60 & 61–90 hari — hold pengiriman baru</p>
       </div>
-      <div class="so-card so-crit">
-        <span class="so-badge crit">🔴 Critical Block</span>
+      <div class="so-card crit">
+        <span class="so-tag crit"><span class="so-tag-dot"></span>Critical Block</span>
         <p class="so-val">{M(cn)}</p>
         <p class="so-sub">{cf:,} faktur · {ca} area</p>
         <p class="so-desc">91+ hari & &lt;2026 — blokir SO, eskalasi manajemen</p>
@@ -493,7 +740,7 @@ def page_otc():
         tbl_so = tbl_so.sort_values("_ord").drop(columns="_ord")
 
     st.dataframe(tbl_so, use_container_width=True, hide_index=True, height=400)
-    dl_btn(df_ov[so_out_cols], "SO_BLOCK_DETAIL", "⬇️ Download SO Block Detail")
+    dl_btn(df_ov[so_out_cols], "SO_BLOCK_DETAIL", "Download SO Block Detail")
 
     # Chart distribusi SO Block per area (top 10)
     sec("DISTRIBUSI SO BLOCK PER NAMA AREA")
@@ -505,9 +752,9 @@ def page_otc():
     pivot = pivot.nlargest(10,"TOTAL")
     fig_so = go.Figure()
     for col_key,color,name in [
-        ("CRITICAL BLOCK","#C8192E","🔴 Critical Block"),
-        ("SOFT BLOCK","#E65C00","🔶 Soft Block"),
-        ("WARNING SO","#F5A623","⚠ Warning SO"),
+        ("CRITICAL BLOCK","#C8192E","Critical Block"),
+        ("SOFT BLOCK","#E65C00","Soft Block"),
+        ("WARNING SO","#F5A623","Warning SO"),
     ]:
         if col_key in pivot.columns:
             fig_so.add_trace(go.Bar(
@@ -632,9 +879,9 @@ def page_otc():
         if c in tbl.columns: tbl[c]=tbl[c].apply(R)
     tbl.rename(columns={"NAMA AREA":"Nama Area","NAMA SALES":"Nama Sales","NAMA TOKO":"Nama Toko","Saldo Akhir":"Sisa AR","OVERDUE?":"Hari OD","KELOMPOK":"Kelompok","GROUPING OS":"Grouping OS"},inplace=True)
     tbl.insert(0,"#",range(1,len(tbl)+1))
-    with st.expander(f"🔽 Tampilkan {len(tbl):,} baris · OS Total: {M(tn)}",expanded=False):
+    with st.expander(f"Tampilkan {len(tbl):,} baris · OS Total: {M(tn)}",expanded=False):
         st.dataframe(tbl,use_container_width=True,hide_index=True,height=440)
-        dl_btn(dff[cols_ok],"OS_MTI_NKA_DETAIL","⬇️ Download Detail Faktur")
+        dl_btn(dff[cols_ok],"OS_MTI_NKA_DETAIL","Download Detail Faktur")
 
 # ════════════════════════════════════════════════════════════════════
 # PAGE: AR GT
@@ -713,20 +960,20 @@ def page_gt():
 
     st.markdown(f"""
     <div class="so-wrap">
-      <div class="so-card so-warn">
-        <span class="so-badge warn">⚠ Warning SO</span>
+      <div class="so-card warn">
+        <span class="so-tag warn"><span class="so-tag-dot"></span>Warning SO</span>
         <p class="so-val">{M(wn)}</p>
         <p class="so-sub">{wf:,} faktur · {wa} area</p>
         <p class="so-desc">1–7 hari & 8–30 hari — segera follow up</p>
       </div>
-      <div class="so-card so-soft">
-        <span class="so-badge soft">🔶 Soft Block</span>
+      <div class="so-card soft">
+        <span class="so-tag soft"><span class="so-tag-dot"></span>Soft Block</span>
         <p class="so-val">{M(sn)}</p>
         <p class="so-sub">{sf:,} faktur · {sa} area</p>
         <p class="so-desc">31–60 & 61–90 hari — hold pengiriman baru</p>
       </div>
-      <div class="so-card so-crit">
-        <span class="so-badge crit">🔴 Critical Block</span>
+      <div class="so-card crit">
+        <span class="so-tag crit"><span class="so-tag-dot"></span>Critical Block</span>
         <p class="so-val">{M(cn)}</p>
         <p class="so-sub">{cf:,} faktur · {ca} area</p>
         <p class="so-desc">91+ hari & &lt;2026 — blokir SO, eskalasi manajemen</p>
@@ -779,7 +1026,7 @@ def page_gt():
         tbl_so = tbl_so.sort_values("_ord").drop(columns="_ord")
 
     st.dataframe(tbl_so, use_container_width=True, hide_index=True, height=400)
-    dl_btn(df_ov[so_out_cols], "GT_SO_BLOCK_DETAIL", "⬇️ Download SO Block GT")
+    dl_btn(df_ov[so_out_cols], "GT_SO_BLOCK_DETAIL", "Download SO Block GT")
 
     # Chart distribusi SO Block per area (top 10)
     sec("DISTRIBUSI SO BLOCK PER NAMA AREA")
@@ -791,9 +1038,9 @@ def page_gt():
     pivot = pivot.nlargest(10,"TOTAL")
     fig_so = go.Figure()
     for col_key,color,name in [
-        ("CRITICAL BLOCK","#C8192E","🔴 Critical Block"),
-        ("SOFT BLOCK","#E65C00","🔶 Soft Block"),
-        ("WARNING SO","#F5A623","⚠ Warning SO"),
+        ("CRITICAL BLOCK","#C8192E","Critical Block"),
+        ("SOFT BLOCK","#E65C00","Soft Block"),
+        ("WARNING SO","#F5A623","Warning SO"),
     ]:
         if col_key in pivot.columns:
             fig_so.add_trace(go.Bar(
@@ -918,15 +1165,15 @@ def page_gt():
         if c in tbl.columns: tbl[c]=tbl[c].apply(R)
     tbl.rename(columns={"Nama Area":"Nama Area","Nama Sales":"Nama Sales","Nama Toko":"Nama Toko","Saldo Akhir":"Sisa AR","OVERDUE?":"Hari OD","KELOMPOK":"Kelompok","Grouping OS":"Grouping OS"},inplace=True)
     tbl.insert(0,"#",range(1,len(tbl)+1))
-    with st.expander(f"🔽 Tampilkan {len(tbl):,} baris · OS Total: {M(tn)}",expanded=False):
+    with st.expander(f"Tampilkan {len(tbl):,} baris · OS Total: {M(tn)}",expanded=False):
         st.dataframe(tbl,use_container_width=True,hide_index=True,height=440)
-        dl_btn(dff[cols_ok],"GT_DETAIL","⬇️ Download Detail Faktur GT")
+        dl_btn(dff[cols_ok],"GT_DETAIL","Download Detail Faktur GT")
 
 # ════════════════════════════════════════════════════════════════════
 
 
 def main():
-    tab1, tab2 = st.tabs(["📋  AR OTC — MTI NKA", "📊  AR GT"])
+    tab1, tab2 = st.tabs(["AR OTC — MTI NKA", "AR GT"])
     with tab1:
         page_otc()
     with tab2:
