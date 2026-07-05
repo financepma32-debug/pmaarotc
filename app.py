@@ -322,16 +322,21 @@ html, body, [class*="css"]  { font-family: 'Inter', sans-serif; }
 
 /* ── Sidebar buttons & controls ──────────────────── */
 [data-testid="stSidebar"] .stButton button {
-    background: #111827;
-    color: #fff;
-    border: none;
+    background: #111827 !important;
+    color: #FFFFFF !important;
+    border: none !important;
     border-radius: 8px;
     font-size: 12px;
     font-weight: 500;
     padding: 8px 0;
 }
 [data-testid="stSidebar"] .stButton button:hover {
-    background: #1F2937;
+    background: #1F2937 !important;
+    color: #FFFFFF !important;
+}
+[data-testid="stSidebar"] .stButton button p,
+[data-testid="stSidebar"] .stButton button span {
+    color: #FFFFFF !important;
 }
 
 /* ── Expander ─────────────────────────────────────── */
@@ -1331,9 +1336,16 @@ def render_change_password():
                     sb.table("app_users").update(
                         {"password": pwd_baru.strip()}
                     ).eq("nik", nik).execute()
-                    # Clear cache user agar password baru langsung berlaku
+                    # Clear cache dan reset session agar login ulang dengan password baru
                     load_users.clear()
-                    st.success("Password berhasil diperbarui.")
+                    st.session_state["pwd_changed"] = True
+                    st.success("Password berhasil diperbarui. Silakan login ulang.")
+                    # Otomatis logout setelah 2 detik agar user login dengan password baru
+                    import time as _time
+                    _time.sleep(1.5)
+                    for k in ["logged_in","user_nik","user_nama"]:
+                        st.session_state.pop(k, None)
+                    st.rerun()
                 except Exception as e:
                     st.error(f"Gagal menyimpan: {e}")
 
