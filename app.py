@@ -68,6 +68,16 @@ html, body, [class*="css"]  { font-family: 'Inter', sans-serif; }
     flex-shrink: 0;
 }
 
+/* ── Sticky header freeze ────────────────────────── */
+.pma-sticky {
+    position: sticky;
+    top: 0;
+    z-index: 999;
+    background: #FFFFFF;
+    padding-bottom: 8px;
+    padding-top: 4px;
+}
+
 /* ── Meta bar (update + count) ────────────────────── */
 .upd-bar {
     display: flex;
@@ -584,16 +594,18 @@ def bucket_strip(dff):
 
 def pma_header(title, last_updated, n_faktur):
     st.markdown(f"""
-    <div class="pma-header">
-      <div class="pma-hl">
-        <p class="pma-title">{title}</p>
-        <p class="pma-sub">PT Pinus Merah Abadi &nbsp;·&nbsp; FAD Team</p>
+    <div class="pma-sticky">
+      <div class="pma-header">
+        <div class="pma-hl">
+          <p class="pma-title">{title}</p>
+          <p class="pma-sub">PT Pinus Merah Abadi &nbsp;·&nbsp; FAD Team</p>
+        </div>
+        <span class="pma-date">{datetime.now().strftime('%d %b %Y')}</span>
       </div>
-      <span class="pma-date">{datetime.now().strftime('%d %b %Y')}</span>
-    </div>
-    <div class="upd-bar">
-      <span>Update terakhir: <strong>{last_updated}</strong></span>
-      <span>{n_faktur:,} faktur ditampilkan</span>
+      <div class="upd-bar">
+        <span>Update terakhir: <strong>{last_updated}</strong></span>
+        <span>{n_faktur:,} faktur ditampilkan</span>
+      </div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -1172,7 +1184,142 @@ def page_gt():
 # ════════════════════════════════════════════════════════════════════
 
 
+# ═══════════════════════════════════════════════════════════════
+# AUTH — Login dengan NIK + Password
+# ═══════════════════════════════════════════════════════════════
+@st.cache_data(ttl=3600, show_spinner=False)
+def load_users() -> dict:
+    """Ambil daftar user dari tabel app_users di Supabase."""
+    try:
+        sb   = get_sb()
+        resp = sb.table("app_users").select("nik,nama,password").execute()
+        return {r["nik"]: r for r in (resp.data or [])}
+    except Exception:
+        return {}
+
+
+def check_login() -> bool:
+    """
+    Tampilkan halaman login jika belum login.
+    Return True jika sudah login, False jika belum.
+    """
+    # Sudah login → langsung lanjut
+    if st.session_state.get("logged_in"):
+        return True
+
+    # ── Halaman Login ────────────────────────────────────────────
+    st.markdown("""
+    <style>
+    [data-testid="stAppViewContainer"] { background: #FFFFFF; }
+    .login-wrap {
+        max-width: 400px;
+        margin: 80px auto 0;
+        padding: 40px 36px 32px;
+        background: #FFFFFF;
+        border: 1px solid #ECECEC;
+        border-radius: 18px;
+        box-shadow: 0 4px 24px rgba(0,0,0,.07);
+    }
+    .login-logo {
+        width: 42px; height: 42px;
+        background: #B01C2E;
+        border-radius: 10px;
+        margin: 0 auto 20px;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .login-title {
+        font-size: 18px; font-weight: 700;
+        color: #111827; text-align: center;
+        margin: 0 0 4px;
+    }
+    .login-sub {
+        font-size: 12px; color: #9CA3AF;
+        text-align: center; margin: 0 0 28px;
+    }
+    .login-error {
+        background: #FEF2F2;
+        border: 1px solid #FECACA;
+        border-radius: 8px;
+        padding: 10px 14px;
+        font-size: 12.5px;
+        color: #991B1B;
+        margin-bottom: 14px;
+        text-align: center;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+    <div class="login-wrap">
+      <div class="login-logo">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+             stroke="#fff" stroke-width="2" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+        </svg>
+      </div>
+      <p class="login-title">AR Dashboard</p>
+      <p class="login-sub">PT Pinus Merah Abadi · FAD Team</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Form login — letakkan di bawah card HTML karena Streamlit form
+    # harus di dalam Python component
+    with st.container():
+        col_pad1, col_form, col_pad2 = st.columns([1, 2, 1])
+        with col_form:
+            st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+            nik  = st.text_input("NIK", placeholder="Masukkan NIK Anda",
+                                  key="login_nik", label_visibility="visible")
+            pwd  = st.text_input("Password", type="password",
+                                  placeholder="Masukkan password",
+                                  key="login_pwd", label_visibility="visible")
+            st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
+            login_btn = st.button("Masuk", use_container_width=True,
+                                   key="login_btn", type="primary")
+
+            if login_btn:
+                users = load_users()
+                if not nik.strip():
+                    st.markdown("<div class='login-error'>NIK tidak boleh kosong.</div>",
+                                unsafe_allow_html=True)
+                elif nik.strip() not in users:
+                    st.markdown("<div class='login-error'>NIK tidak ditemukan.</div>",
+                                unsafe_allow_html=True)
+                elif users[nik.strip()]["password"] != pwd.strip():
+                    st.markdown("<div class='login-error'>Password salah.</div>",
+                                unsafe_allow_html=True)
+                else:
+                    user = users[nik.strip()]
+                    st.session_state["logged_in"]   = True
+                    st.session_state["user_nik"]    = nik.strip()
+                    st.session_state["user_nama"]   = user["nama"]
+                    st.rerun()
+
+    return False
+
+
 def main():
+    if not check_login():
+        return
+
+    # Tombol logout di sidebar
+    with st.sidebar:
+        nama = st.session_state.get("user_nama", "")
+        nik  = st.session_state.get("user_nik", "")
+        st.markdown(
+            f"<div style='padding:10px 0 6px;font-size:12px;color:#374151'>"
+            f"<div style='font-weight:600'>{nama}</div>"
+            f"<div style='color:#9CA3AF;font-size:11px'>NIK {nik}</div>"
+            f"</div>",
+            unsafe_allow_html=True,
+        )
+        if st.button("Keluar", use_container_width=True, key="logout_btn"):
+            for k in ["logged_in","user_nik","user_nama"]:
+                st.session_state.pop(k, None)
+            st.rerun()
+        st.markdown("<hr style='margin:8px 0;border-color:#ECECEC'>", unsafe_allow_html=True)
+
     tab1, tab2 = st.tabs(["AR OTC — MTI NKA", "AR GT"])
     with tab1:
         page_otc()
