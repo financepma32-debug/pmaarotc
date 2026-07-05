@@ -1299,6 +1299,45 @@ def check_login() -> bool:
     return False
 
 
+def render_change_password():
+    """
+    Panel ganti password — ditampilkan di sidebar bawah setelah login.
+    Verifikasi password lama → update ke Supabase.
+    """
+    with st.sidebar.expander("Ganti Password", expanded=False):
+        pwd_lama  = st.text_input("Password lama", type="password", key="cp_old")
+        pwd_baru  = st.text_input("Password baru", type="password", key="cp_new")
+        pwd_konfirm = st.text_input("Konfirmasi password baru", type="password", key="cp_confirm")
+        ganti_btn = st.button("Simpan", use_container_width=True, key="cp_btn")
+
+        if ganti_btn:
+            nik   = st.session_state.get("user_nik", "")
+            users = load_users()
+            user  = users.get(nik)
+
+            if not all([pwd_lama, pwd_baru, pwd_konfirm]):
+                st.error("Semua kolom wajib diisi.")
+            elif user is None:
+                st.error("Session tidak valid, silakan login ulang.")
+            elif user["password"] != pwd_lama.strip():
+                st.error("Password lama salah.")
+            elif len(pwd_baru.strip()) < 6:
+                st.error("Password baru minimal 6 karakter.")
+            elif pwd_baru.strip() != pwd_konfirm.strip():
+                st.error("Konfirmasi password tidak cocok.")
+            else:
+                try:
+                    sb = get_sb()
+                    sb.table("app_users").update(
+                        {"password": pwd_baru.strip()}
+                    ).eq("nik", nik).execute()
+                    # Clear cache user agar password baru langsung berlaku
+                    load_users.clear()
+                    st.success("Password berhasil diperbarui.")
+                except Exception as e:
+                    st.error(f"Gagal menyimpan: {e}")
+
+
 def main():
     if not check_login():
         return
@@ -1319,6 +1358,8 @@ def main():
                 st.session_state.pop(k, None)
             st.rerun()
         st.markdown("<hr style='margin:8px 0;border-color:#ECECEC'>", unsafe_allow_html=True)
+
+    render_change_password()
 
     tab1, tab2 = st.tabs(["AR OTC — MTI NKA", "AR GT"])
     with tab1:
