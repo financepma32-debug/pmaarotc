@@ -870,7 +870,7 @@ def page_otc():
     # ════ DETAIL FAKTUR ════
     ovrd_ct=int((dff["OVERDUE?"]>0).sum())
     sec(f"DETAIL FAKTUR — {ovrd_ct:,} FAKTUR OVERDUE")
-    COLS=["NAMA AREA","RBM","ASM","NAMA SALES","NAMA TOKO","No Faktur","Tanggal Faktur","Tanggal JT","Nilai Faktur","Saldo Akhir","KELOMPOK","OVERDUE?","GROUPING OS"]
+    COLS=["NAMA AREA","RBM","ASM","NAMA SALES","NAMA TOKO","No Faktur","Tanggal Faktur","Tanggal JT","Nilai Faktur","NOMINAL","Saldo Akhir","KELOMPOK","OVERDUE?","GROUPING OS"]
     cols_ok=[c for c in COLS if c in dff.columns]
     tbl=dff[cols_ok].copy()
     if "Tanggal Faktur" in tbl.columns: tbl["Tanggal Faktur"]=tbl["Tanggal Faktur"].dt.strftime("%d %b %Y")
@@ -1156,7 +1156,7 @@ def page_gt():
     # ════ DETAIL FAKTUR ════
     ovrd_ct=int((dff["OVERDUE?"]>0).sum())
     sec(f"DETAIL FAKTUR — {ovrd_ct:,} FAKTUR OVERDUE")
-    COLS=["Nama Area","RBM","ASM","Nama Sales","Nama Toko","No Faktur","Tanggal Faktur","Tanggal JT","Nilai Faktur","Saldo Akhir","KELOMPOK","OVERDUE?","Grouping OS"]
+    COLS=["Nama Area","RBM","ASM","Nama Sales","Nama Toko","No Faktur","Tanggal Faktur","Tanggal JT","Nilai Faktur","Nominal","Saldo Akhir","KELOMPOK","OVERDUE?","Grouping OS"]
     cols_ok=[c for c in COLS if c in dff.columns]
     tbl=dff[cols_ok].copy()
     if "Tanggal Faktur" in tbl.columns: tbl["Tanggal Faktur"]=tbl["Tanggal Faktur"].dt.strftime("%d %b %Y")
