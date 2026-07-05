@@ -455,7 +455,7 @@ def load_otc():
     except Exception:
         pass
     try:
-        rows,page,SZ = [],0,1000
+        rows,page,SZ = [],0,5000
         while True:
             r = sb.table("os_master").select("*").range(page*SZ,(page+1)*SZ-1).execute()
             if not r.data: break
@@ -498,7 +498,7 @@ def load_gt():
     except Exception:
         pass
     try:
-        rows,page,SZ = [],0,1000
+        rows,page,SZ = [],0,5000
         while True:
             r = sb.table("gt_master").select("*").range(page*SZ,(page+1)*SZ-1).execute()
             if not r.data: break
@@ -1205,7 +1205,7 @@ def load_rdi():
     except Exception:
         pass
     try:
-        rows,page,SZ = [],0,1000
+        rows,page,SZ = [],0,5000
         while True:
             r = sb.table("rdi_master").select("*").range(page*SZ,(page+1)*SZ-1).execute()
             if not r.data: break
@@ -1414,6 +1414,35 @@ def page_rdi():
         dl_btn(dff[cols_ok],"RDI_DETAIL","Download Detail Faktur RDI")
 
 
+
+def preload_all():
+    """
+    Muat OTC + GT + RDI secara paralel menggunakan threading.
+    Dipanggil sekali di awal setelah login — hasilnya masuk ke cache Streamlit
+    sehingga saat user klik tab, data sudah siap.
+    """
+    import threading
+
+    results = {}
+
+    def _load(name, fn):
+        try:
+            df, ts = fn()
+            results[name] = (df, ts)
+        except Exception as e:
+            results[name] = (None, "–")
+
+    threads = [
+        threading.Thread(target=_load, args=("otc", load_otc)),
+        threading.Thread(target=_load, args=("gt",  load_gt)),
+        threading.Thread(target=_load, args=("rdi", load_rdi)),
+    ]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+
 # ═══════════════════════════════════════════════════════════════
 # AUTH — Login dengan NIK + Password
 # ═══════════════════════════════════════════════════════════════
@@ -1579,6 +1608,12 @@ def main():
     if not check_login():
         return
 
+    # Preload semua data paralel (sekali, hasilnya di-cache)
+    if not st.session_state.get("preloaded"):
+        with st.spinner("Memuat data dashboard..."):
+            preload_all()
+        st.session_state["preloaded"] = True
+
     # Tombol logout di sidebar
     with st.sidebar:
         nama = st.session_state.get("user_nama", "")
@@ -1591,7 +1626,7 @@ def main():
             unsafe_allow_html=True,
         )
         if st.button("Keluar", use_container_width=True, key="logout_btn"):
-            for k in ["logged_in","user_nik","user_nama"]:
+            for k in ["logged_in","user_nik","user_nama","preloaded"]:
                 st.session_state.pop(k, None)
             st.rerun()
         st.markdown("<hr style='margin:8px 0;border-color:#ECECEC'>", unsafe_allow_html=True)
