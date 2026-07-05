@@ -455,7 +455,7 @@ def load_otc():
     except Exception:
         pass
     try:
-        rows,page,SZ = [],0,5000
+        rows,page,SZ = [],0,1000
         while True:
             r = sb.table("os_master").select("*").range(page*SZ,(page+1)*SZ-1).execute()
             if not r.data: break
@@ -498,7 +498,7 @@ def load_gt():
     except Exception:
         pass
     try:
-        rows,page,SZ = [],0,5000
+        rows,page,SZ = [],0,1000
         while True:
             r = sb.table("gt_master").select("*").range(page*SZ,(page+1)*SZ-1).execute()
             if not r.data: break
@@ -1205,7 +1205,7 @@ def load_rdi():
     except Exception:
         pass
     try:
-        rows,page,SZ = [],0,5000
+        rows,page,SZ = [],0,1000
         while True:
             r = sb.table("rdi_master").select("*").range(page*SZ,(page+1)*SZ-1).execute()
             if not r.data: break
