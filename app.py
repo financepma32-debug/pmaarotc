@@ -1188,6 +1188,231 @@ def page_gt():
 
 # ════════════════════════════════════════════════════════════════════
 
+@st.cache_data(ttl=300, show_spinner=False)
+def load_rdi():
+    sb = get_sb()
+    last_updated = "–"
+    try:
+        meta = sb.table("upload_log_rdi").select("uploaded_at,total_rows") \
+                 .order("uploaded_at",desc=True).limit(1).execute()
+        if meta.data:
+            raw = meta.data[0].get("uploaded_at","")
+            try:
+                dt = datetime.fromisoformat(raw.replace("Z","+00:00"))
+                last_updated = dt.strftime("%d %b %Y · %H:%M WIB")
+            except Exception:
+                last_updated = raw
+    except Exception:
+        pass
+    try:
+        rows,page,SZ = [],0,1000
+        while True:
+            r = sb.table("rdi_master").select("*").range(page*SZ,(page+1)*SZ-1).execute()
+            if not r.data: break
+            rows.extend(r.data)
+            if len(r.data)<SZ: break
+            page+=1
+        if not rows: return pd.DataFrame(), last_updated
+        df = pd.DataFrame(rows)
+        for c in ("id","created_at"):
+            if c in df.columns: df.drop(columns=c,inplace=True)
+        RDI_ALL = [
+            "Nama Area","Nama Sales","Nama Toko","Kategori Overdue","Region",
+            "Jenis Outlet","Nominal","Grouping OS","RBM","ASM","No Faktur",
+            "No Faktur Scylla","Tanggal Faktur","Tanggal JT","Nilai Faktur","TOP",
+            "JENIS KASUS","KRONOLOGI","JENIS BA","NO BA","BAP","TGL KONFIRMASI",
+            "ACTION PLAN","PENYELESAIAN",
+            "BERAPA HARI?","KELOMPOK",
+            "CURRENT","1-7 DAYS","8-30 DAYS","31-60 DAYS","61-90 DAYS",
+            "91-120 DAYS","121+ DAYS","<2026",
+            "KELOMPOK2","OVERDUE","TANGGAL HARI INII","batas 2025","OVERDUE?",
+            "ACTUAL PELUNASAN","TARGET PELUNASAN","TODAY+1","DUE DATE","Qty Faktur Gantung",
+        ]
+        RDI_NUM = {
+            "Nominal","Nilai Faktur","CURRENT","1-7 DAYS","8-30 DAYS","31-60 DAYS",
+            "61-90 DAYS","91-120 DAYS","121+ DAYS","<2026",
+            "OVERDUE","OVERDUE?","ACTUAL PELUNASAN","TARGET PELUNASAN",
+            "DUE DATE","Qty Faktur Gantung",
+        }
+        RDI_DT = {"Tanggal Faktur","Tanggal JT","TANGGAL HARI INII","batas 2025","TODAY+1"}
+        for col in RDI_ALL:
+            if col not in df.columns: df[col]=None
+        df = df[[c for c in RDI_ALL if c in df.columns]].copy()
+        for col in RDI_NUM:
+            if col in df.columns:
+                df[col]=pd.to_numeric(df[col],errors="coerce").fillna(0)
+        for col in RDI_DT:
+            if col in df.columns:
+                df[col]=pd.to_datetime(df[col],errors="coerce")
+        return df, last_updated
+    except Exception as e:
+        st.error(f"Gagal ambil data RDI: {e}")
+        return pd.DataFrame(), last_updated
+
+
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# PAGE: AR RDI
+# ════════════════════════════════════════════════════════════════════════════
+def page_rdi():
+    with st.spinner("Memuat data RDI..."):
+        df, last_updated = load_rdi()
+
+    if df.empty:
+        st.info("Belum ada data RDI. Jalankan **JALANKAN_SEMUA.bat** untuk upload data RDI.")
+        return
+
+    # Sidebar
+    st.sidebar.markdown("### Filter RDI")
+    def sbr(label, col, src):
+        if col not in src.columns: return "Semua"
+        opts = ["Semua"] + sorted(src[col].dropna().unique().tolist())
+        return st.sidebar.selectbox(label, opts, key=f"rdi_{col}")
+
+    sel_region = sbr("Region",       "Region",       df)
+    d0 = df if sel_region=="Semua" else df[df["Region"]==sel_region]
+    sel_area   = sbr("Nama Area",    "Nama Area",    d0)
+    d1 = d0 if sel_area=="Semua" else d0[d0["Nama Area"]==sel_area]
+    sel_jenis  = sbr("Jenis Outlet", "Jenis Outlet", d1)
+    sel_asm    = sbr("ASM",          "ASM",          d1)
+    sel_grp    = sbr("Grouping OS",  "Grouping OS",  d1)
+    sel_bkt    = st.sidebar.multiselect("Kelompok Aging", BUCKETS, default=BUCKETS, key="rdi_bkt")
+    st.sidebar.markdown("---")
+    if st.sidebar.button("Refresh RDI", use_container_width=True, key="ref_rdi"):
+        st.cache_data.clear(); st.rerun()
+    st.sidebar.caption(f"Terakhir diperbarui: {last_updated}")
+
+    # Filter
+    dff = df.copy()
+    if sel_region!="Semua" and "Region"       in dff.columns: dff=dff[dff["Region"]==sel_region]
+    if sel_area  !="Semua" and "Nama Area"    in dff.columns: dff=dff[dff["Nama Area"]==sel_area]
+    if sel_jenis !="Semua" and "Jenis Outlet" in dff.columns: dff=dff[dff["Jenis Outlet"]==sel_jenis]
+    if sel_asm   !="Semua" and "ASM"          in dff.columns: dff=dff[dff["ASM"]==sel_asm]
+    if sel_grp   !="Semua" and "Grouping OS"  in dff.columns: dff=dff[dff["Grouping OS"]==sel_grp]
+    if sel_bkt and "KELOMPOK" in dff.columns: dff=dff[dff["KELOMPOK"].isin(sel_bkt)]
+    if dff.empty:
+        st.warning("Tidak ada data sesuai filter."); return
+
+    pma_header("AR Outstanding RDI", last_updated, len(dff))
+
+    # KPI
+    tn  = dff["Nominal"].sum()            if "Nominal"           in dff.columns else 0
+    to  = dff["OVERDUE"].sum()            if "OVERDUE"           in dff.columns else 0
+    tc  = dff["CURRENT"].sum()            if "CURRENT"           in dff.columns else 0
+    ta  = dff["ACTUAL PELUNASAN"].sum()   if "ACTUAL PELUNASAN"  in dff.columns else 0
+    tt  = dff["TARGET PELUNASAN"].sum()   if "TARGET PELUNASAN"  in dff.columns else 0
+    td  = dff["DUE DATE"].sum()           if "DUE DATE"          in dff.columns else 0
+    tq  = int(dff["Qty Faktur Gantung"].sum()) if "Qty Faktur Gantung" in dff.columns else 0
+    tnf = dff["Nilai Faktur"].sum()       if "Nilai Faktur"      in dff.columns else 0
+
+    c1,c2,c3,c4,c5,c6 = st.columns(6)
+    kpi(c1,"Total Outstanding RDI", M(tn),  f"Nilai Faktur {M(tnf)}")
+    kpi(c2,"Overdue",               M(to),  P(to,tn)+" dari outstanding")
+    kpi(c3,"Current",               M(tc),  P(tc,tn)+" dari total","green")
+    kpi(c4,"% Collection",          P(ta,tt),f"Actual {M(ta)} / Target {M(tt)}","gold")
+    kpi(c5,"Due Date Hari Ini",     M(td),  "Nominal jatuh tempo hari ini","stone")
+    kpi(c6,"Qty Faktur Gantung",    f"{tq:,}",f"{len(dff):,} baris data","orange")
+    st.markdown("<br>",unsafe_allow_html=True)
+
+    bv, grand = bucket_strip(dff)
+
+    # SO Block
+    sec("STATUS SO BLOCK RDI — REKOMENDASI TINDAKAN")
+    if "KELOMPOK" in dff.columns:
+        df_ov = dff[dff["KELOMPOK"]!="CURRENT"].copy()
+        df_ov["SO Status"] = df_ov["KELOMPOK"].map(SO_MAP)
+        wn = df_ov[df_ov["SO Status"]=="WARNING SO"]["Nominal"].sum()   if "Nominal" in df_ov.columns else 0
+        sn = df_ov[df_ov["SO Status"]=="SOFT BLOCK"]["Nominal"].sum()   if "Nominal" in df_ov.columns else 0
+        cn = df_ov[df_ov["SO Status"]=="CRITICAL BLOCK"]["Nominal"].sum() if "Nominal" in df_ov.columns else 0
+        wf = (df_ov["SO Status"]=="WARNING SO").sum()
+        sf = (df_ov["SO Status"]=="SOFT BLOCK").sum()
+        cf = (df_ov["SO Status"]=="CRITICAL BLOCK").sum()
+        wa = df_ov[df_ov["SO Status"]=="WARNING SO"]["Nama Area"].nunique()  if "Nama Area" in df_ov.columns else 0
+        sa = df_ov[df_ov["SO Status"]=="SOFT BLOCK"]["Nama Area"].nunique()  if "Nama Area" in df_ov.columns else 0
+        ca = df_ov[df_ov["SO Status"]=="CRITICAL BLOCK"]["Nama Area"].nunique() if "Nama Area" in df_ov.columns else 0
+
+        st.markdown(f"""
+        <div class="so-wrap">
+          <div class="so-card warn"><span class="so-tag warn"><span class="so-tag-dot"></span>Warning SO</span>
+            <p class="so-val">{M(wn)}</p><p class="so-sub">{wf:,} faktur · {wa} area</p>
+            <p class="so-desc">1–7 hari & 8–30 hari</p></div>
+          <div class="so-card soft"><span class="so-tag soft"><span class="so-tag-dot"></span>Soft Block</span>
+            <p class="so-val">{M(sn)}</p><p class="so-sub">{sf:,} faktur · {sa} area</p>
+            <p class="so-desc">31–60 & 61–90 hari</p></div>
+          <div class="so-card crit"><span class="so-tag crit"><span class="so-tag-dot"></span>Critical Block</span>
+            <p class="so-val">{M(cn)}</p><p class="so-sub">{cf:,} faktur · {ca} area</p>
+            <p class="so-desc">91+ hari & &lt;2026</p></div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        rdi_so_cols = [c for c in ["SO Status","Nama Area","ASM","Nama Toko",
+                                    "No Faktur","KELOMPOK","Nominal","Nilai Faktur"] if c in df_ov.columns]
+        tbl_rdi_so = df_ov[rdi_so_cols].copy()
+        for c in ["Nominal","Nilai Faktur"]:
+            if c in tbl_rdi_so.columns: tbl_rdi_so[c]=tbl_rdi_so[c].apply(M)
+        tbl_rdi_so.rename(columns={"KELOMPOK":"Kelompok"},inplace=True)
+        tbl_rdi_so.insert(0,"#",range(1,len(tbl_rdi_so)+1))
+        st.dataframe(tbl_rdi_so, use_container_width=True, hide_index=True, height=380)
+        dl_btn(df_ov[rdi_so_cols], "RDI_SO_BLOCK_DETAIL","Download SO Block RDI")
+
+    # Komposisi
+    sec("KOMPOSISI OUTSTANDING RDI")
+    ca2,cb2 = st.columns([5,4])
+    with ca2:
+        if "Grouping OS" in dff.columns:
+            grp_os=(dff[dff["Nominal"]>0].groupby("Grouping OS")["Nominal"]
+                    .sum().sort_values().reset_index())
+            grp_os.columns=["Kategori","Nominal"]
+            fig_h=go.Figure(go.Bar(x=grp_os["Nominal"],y=grp_os["Kategori"],orientation="h",
+                marker_color=CHART_PALETTE[:len(grp_os)],
+                text=[M(v) for v in grp_os["Nominal"]],
+                textposition="outside",textfont=dict(size=10,color="#1E1E1E")))
+            plot_base(fig_h,h=300); fig_h.update_layout(xaxis_tickformat=",")
+            st.plotly_chart(fig_h,use_container_width=True)
+    with cb2:
+        pl=[b for b in BUCKETS if bv[b]>0]
+        pv=[bv[b] for b in BUCKETS if bv[b]>0]
+        pc=[BUCKET_COLOR[b] for b in BUCKETS if bv[b]>0]
+        fig_pie=go.Figure(go.Pie(labels=pl,values=pv,marker_colors=pc,hole=0.55,
+            textinfo="percent",textfont_size=11))
+        fig_pie.update_layout(paper_bgcolor="rgba(0,0,0,0)",plot_bgcolor="rgba(0,0,0,0)",
+            height=300,margin=dict(t=12,b=12,l=0,r=0),showlegend=True,
+            legend=dict(font_size=10,x=1.01,y=0.5,xanchor="left"),
+            annotations=[dict(text=f"<b>{M(grand)}</b><br><span style='font-size:9px'>Total OS</span>",
+                x=0.5,y=0.5,showarrow=False,font=dict(size=14,color="#1E1E1E"))])
+        st.plotly_chart(fig_pie,use_container_width=True)
+
+    # Wilayah
+    sec("OUTSTANDING RDI PER WILAYAH")
+    if "Nama Area" in dff.columns:
+        t_area=(dff.groupby("Nama Area")
+                .agg(NF=("Nilai Faktur","sum"),Cur=("CURRENT","sum"),Ov=("OVERDUE","sum"))
+                .reset_index().sort_values("NF",ascending=False))
+        t_area["%C/OD"]=t_area.apply(lambda r: P(r["Cur"],r["Cur"]+r["Ov"]),axis=1)
+        for c in ["NF","Cur","Ov"]: t_area[c]=t_area[c].apply(M)
+        t_area.columns=["Nama Area","Nilai Faktur","Current","Overdue","%Curr/OD"]
+        st.dataframe(t_area,use_container_width=True,hide_index=True,height=340)
+        dl_btn(t_area,"RDI_OUTSTANDING_PER_AREA")
+
+    # Detail faktur
+    ovrd_ct=int((dff["OVERDUE?"]>0).sum()) if "OVERDUE?" in dff.columns else 0
+    sec(f"DETAIL FAKTUR RDI — {ovrd_ct:,} FAKTUR OVERDUE")
+    COLS=["Nama Area","ASM","Nama Sales","Nama Toko","No Faktur",
+          "Tanggal Faktur","Tanggal JT","Nilai Faktur","Nominal",
+          "KELOMPOK","OVERDUE?","Grouping OS"]
+    cols_ok=[c for c in COLS if c in dff.columns]
+    tbl=dff[cols_ok].copy()
+    if "Tanggal Faktur" in tbl.columns: tbl["Tanggal Faktur"]=tbl["Tanggal Faktur"].dt.strftime("%d %b %Y")
+    if "Tanggal JT"     in tbl.columns: tbl["Tanggal JT"]    =tbl["Tanggal JT"].dt.strftime("%d %b %Y")
+    for c in ["Nilai Faktur","Nominal"]:
+        if c in tbl.columns: tbl[c]=tbl[c].apply(R)
+    tbl.rename(columns={"OVERDUE?":"Hari OD","KELOMPOK":"Kelompok","Grouping OS":"Grouping OS"},inplace=True)
+    tbl.insert(0,"#",range(1,len(tbl)+1))
+    with st.expander(f"Tampilkan {len(tbl):,} baris · OS Total: {M(tn)}",expanded=False):
+        st.dataframe(tbl,use_container_width=True,hide_index=True,height=440)
+        dl_btn(dff[cols_ok],"RDI_DETAIL","Download Detail Faktur RDI")
+
 
 # ═══════════════════════════════════════════════════════════════
 # AUTH — Login dengan NIK + Password
@@ -1373,11 +1598,13 @@ def main():
 
     render_change_password()
 
-    tab1, tab2 = st.tabs(["AR OTC — MTI NKA", "AR GT"])
+    tab1, tab2, tab3 = st.tabs(["AR OTC — MTI NKA", "AR GT", "AR RDI"])
     with tab1:
         page_otc()
     with tab2:
         page_gt()
+    with tab3:
+        page_rdi()
 
 if __name__ == "__main__":
     main()
