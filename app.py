@@ -919,15 +919,6 @@ def page_gt(filters):
         dff = dff[dff["No Faktur"].isin(valid_nf)]
     if dff.empty:
         st.warning("Tidak ada data sesuai filter."); return
-    if sel_region!="Semua": dff=dff[dff["Region"]      ==sel_region]
-    if sel_area  !="Semua": dff=dff[dff["Nama Area"]   ==sel_area]
-    if sel_jenis !="Semua": dff=dff[dff["Jenis Outlet"] ==sel_jenis]
-    if sel_asm   !="Semua": dff=dff[dff["ASM"]         ==sel_asm]
-    if sel_rbm   !="Semua": dff=dff[dff["RBM"]         ==sel_rbm]
-    if sel_grp   !="Semua": dff=dff[dff["Grouping OS"] ==sel_grp]
-    if sel_bkt:              dff=dff[dff["KELOMPOK"].isin(sel_bkt)]
-    if dff.empty:
-        st.warning("Tidak ada data sesuai filter."); return
 
     pma_header("AR Outstanding GT", last_updated, len(dff))
 
