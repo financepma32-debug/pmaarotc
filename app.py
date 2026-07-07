@@ -448,7 +448,7 @@ def load_otc():
         if meta.data:
             raw = meta.data[0].get("uploaded_at","")
             try:
-                dt = datetime.fromisoformat(raw.replace("Z","+00:00"))
+                dt = datetime.fromisoformat(raw.replace("Z","+07:00"))
                 last_updated = dt.strftime("%d %b %Y · %H:%M WIB")
             except Exception:
                 last_updated = raw
@@ -617,31 +617,42 @@ def pma_header(title, last_updated, n_faktur):
 # ════════════════════════════════════════════════════════════════════
 # PAGE: AR OTC
 # ════════════════════════════════════════════════════════════════════
-def page_otc(filters):
+def page_otc():
     with st.spinner("Memuat data OTC..."):
         df, last_updated = load_otc()
 
     if df.empty:
-        st.warning("Belum ada data OTC. Jalankan **JALANKAN_SEMUA.bat** untuk upload data.")
+        st.warning("Belum ada data OTC. Jalankan **JALANKAN_UPLOAD.bat** untuk upload data.")
         return
 
+    # ── SIDEBAR ───────────────────────────────────────────────────
+    st.sidebar.markdown("### Filter OTC")
+    def sb(label, col, src):
+        opts = ["Semua"] + sorted(src[col].dropna().unique().tolist())
+        return st.sidebar.selectbox(label, opts, key=f"otc_{col}")
+
+    sel_region = sb("Region",       "REGION",       df)
+    d0 = df if sel_region=="Semua" else df[df["REGION"]==sel_region]
+    sel_area   = sb("Nama Area",    "NAMA AREA",    d0)
+    d1 = d0 if sel_area=="Semua" else d0[d0["NAMA AREA"]==sel_area]
+    sel_jenis  = sb("Jenis Outlet", "JENIS OUTLET", d1)
+    sel_asm    = sb("ASM",          "ASM",          d1)
+    sel_rbm    = sb("RBM",          "RBM",          d1)
+    sel_grp    = sb("Grouping OS",  "GROUPING OS",  d1)
+    sel_bkt    = st.sidebar.multiselect("Kelompok Aging", BUCKETS, default=BUCKETS, key="otc_bkt")
+    st.sidebar.markdown("---")
+    if st.sidebar.button("↺ Refresh OTC", use_container_width=True, key="ref_otc"):
+        st.cache_data.clear(); st.rerun()
+    st.sidebar.caption(f"Terakhir diperbarui: {last_updated}")
+
     dff = df.copy()
-    if filters["region"]!="Semua" and "REGION"          in dff.columns: dff=dff[dff["REGION"]          ==filters["region"]]
-    if filters["area"]  !="Semua" and "NAMA AREA"        in dff.columns: dff=dff[dff["NAMA AREA"]        ==filters["area"]]
-    if filters["asm"]   !="Semua" and "ASM"              in dff.columns: dff=dff[dff["ASM"]              ==filters["asm"]]
-    if filters["rbm"]   !="Semua" and "RBM"              in dff.columns: dff=dff[dff["RBM"]              ==filters["rbm"]]
-    if filters["sales"] !="Semua" and "NAMA SALES"       in dff.columns: dff=dff[dff["NAMA SALES"]       ==filters["sales"]]
-    if filters["jenis"] !="Semua" and "JENIS OUTLET"     in dff.columns: dff=dff[dff["JENIS OUTLET"]     ==filters["jenis"]]
-    if filters["toko"]  !="Semua" and "NAMA TOKO"        in dff.columns: dff=dff[dff["NAMA TOKO"]        ==filters["toko"]]
-    if filters["kat"]   !="Semua" and "KATEGORI OVERDUE" in dff.columns: dff=dff[dff["KATEGORI OVERDUE"] ==filters["kat"]]
-    if filters["grp"]   !="Semua" and "GROUPING OS"      in dff.columns: dff=dff[dff["GROUPING OS"]      ==filters["grp"]]
-    if filters["top"]   !="Semua" and "TOP"              in dff.columns: dff=dff[dff["TOP"]              ==filters["top"]]
-    if filters["bkt"]:              dff=dff[dff["KELOMPOK"].isin(filters["bkt"])]
-    if filters["so_kat"]!="Semua" and "KELOMPOK" in dff.columns:
-        df_so_tmp = dff[dff["KELOMPOK"]!="CURRENT"].copy()
-        df_so_tmp["_SO"] = df_so_tmp["KELOMPOK"].map(SO_MAP)
-        valid_nf = df_so_tmp[df_so_tmp["_SO"]==filters["so_kat"]]["No Faktur"]
-        dff = dff[dff["No Faktur"].isin(valid_nf)]
+    if sel_region!="Semua": dff=dff[dff["REGION"]      ==sel_region]
+    if sel_area  !="Semua": dff=dff[dff["NAMA AREA"]   ==sel_area]
+    if sel_jenis !="Semua": dff=dff[dff["JENIS OUTLET"] ==sel_jenis]
+    if sel_asm   !="Semua": dff=dff[dff["ASM"]         ==sel_asm]
+    if sel_rbm   !="Semua": dff=dff[dff["RBM"]         ==sel_rbm]
+    if sel_grp   !="Semua": dff=dff[dff["GROUPING OS"] ==sel_grp]
+    if sel_bkt:              dff=dff[dff["KELOMPOK"].isin(sel_bkt)]
     if dff.empty:
         st.warning("Tidak ada data sesuai filter."); return
 
@@ -892,7 +903,7 @@ def page_otc(filters):
 # ════════════════════════════════════════════════════════════════════
 # PAGE: AR GT
 # ════════════════════════════════════════════════════════════════════
-def page_gt(filters):
+def page_gt():
     with st.spinner("Memuat data GT..."):
         df, last_updated = load_gt()
 
@@ -900,23 +911,34 @@ def page_gt(filters):
         st.warning("Belum ada data OTC. Jalankan **JALANKAN_SEMUA.bat** untuk upload data GT.")
         return
 
+    # ── SIDEBAR ───────────────────────────────────────────────────
+    st.sidebar.markdown("### Filter OTC")
+    def sb(label, col, src):
+        opts = ["Semua"] + sorted(src[col].dropna().unique().tolist())
+        return st.sidebar.selectbox(label, opts, key=f"gt_{col}")
+
+    sel_region = sb("Region",       "Region",       df)
+    d0 = df if sel_region=="Semua" else df[df["Region"]==sel_region]
+    sel_area   = sb("Nama Area",    "Nama Area",    d0)
+    d1 = d0 if sel_area=="Semua" else d0[d0["Nama Area"]==sel_area]
+    sel_jenis  = sb("Jenis Outlet", "Jenis Outlet", d1)
+    sel_asm    = sb("ASM",          "ASM",          d1)
+    sel_rbm    = sb("RBM",          "RBM",          d1)
+    sel_grp    = sb("Grouping OS",  "Grouping OS",  d1)
+    sel_bkt    = st.sidebar.multiselect("Kelompok Aging", BUCKETS, default=BUCKETS, key="gt_bkt")
+    st.sidebar.markdown("---")
+    if st.sidebar.button("↺ Refresh GT", use_container_width=True, key="ref_gt"):
+        st.cache_data.clear(); st.rerun()
+    st.sidebar.caption(f"Update GT: {last_updated}")
+
     dff = df.copy()
-    if filters["region"]!="Semua" and "Region"          in dff.columns: dff=dff[dff["Region"]         ==filters["region"]]
-    if filters["area"]  !="Semua" and "Nama Area"        in dff.columns: dff=dff[dff["Nama Area"]       ==filters["area"]]
-    if filters["asm"]   !="Semua" and "ASM"              in dff.columns: dff=dff[dff["ASM"]             ==filters["asm"]]
-    if filters["rbm"]   !="Semua" and "RBM"              in dff.columns: dff=dff[dff["RBM"]             ==filters["rbm"]]
-    if filters["sales"] !="Semua" and "Nama Sales"       in dff.columns: dff=dff[dff["Nama Sales"]      ==filters["sales"]]
-    if filters["jenis"] !="Semua" and "Jenis Outlet"     in dff.columns: dff=dff[dff["Jenis Outlet"]    ==filters["jenis"]]
-    if filters["toko"]  !="Semua" and "Nama Toko"        in dff.columns: dff=dff[dff["Nama Toko"]       ==filters["toko"]]
-    if filters["kat"]   !="Semua" and "Kategori Overdue" in dff.columns: dff=dff[dff["Kategori Overdue"]==filters["kat"]]
-    if filters["grp"]   !="Semua" and "Grouping OS"      in dff.columns: dff=dff[dff["Grouping OS"]     ==filters["grp"]]
-    if filters["top"]   !="Semua" and "TOP"              in dff.columns: dff=dff[dff["TOP"]             ==filters["top"]]
-    if filters["bkt"] and "KELOMPOK" in dff.columns: dff=dff[dff["KELOMPOK"].isin(filters["bkt"])]
-    if filters["so_kat"]!="Semua" and "KELOMPOK" in dff.columns:
-        df_so_tmp = dff[dff["KELOMPOK"]!="CURRENT"].copy()
-        df_so_tmp["_SO"] = df_so_tmp["KELOMPOK"].map(SO_MAP)
-        valid_nf = df_so_tmp[df_so_tmp["_SO"]==filters["so_kat"]]["No Faktur"]
-        dff = dff[dff["No Faktur"].isin(valid_nf)]
+    if sel_region!="Semua": dff=dff[dff["Region"]      ==sel_region]
+    if sel_area  !="Semua": dff=dff[dff["Nama Area"]   ==sel_area]
+    if sel_jenis !="Semua": dff=dff[dff["Jenis Outlet"] ==sel_jenis]
+    if sel_asm   !="Semua": dff=dff[dff["ASM"]         ==sel_asm]
+    if sel_rbm   !="Semua": dff=dff[dff["RBM"]         ==sel_rbm]
+    if sel_grp   !="Semua": dff=dff[dff["Grouping OS"] ==sel_grp]
+    if sel_bkt:              dff=dff[dff["KELOMPOK"].isin(sel_bkt)]
     if dff.empty:
         st.warning("Tidak ada data sesuai filter."); return
 
@@ -1233,7 +1255,7 @@ def load_rdi():
 # ════════════════════════════════════════════════════════════════════════════
 # PAGE: AR RDI
 # ════════════════════════════════════════════════════════════════════════════
-def page_rdi(filters):
+def page_rdi():
     with st.spinner("Memuat data RDI..."):
         df, last_updated = load_rdi()
 
@@ -1241,23 +1263,34 @@ def page_rdi(filters):
         st.info("Belum ada data RDI. Jalankan **JALANKAN_SEMUA.bat** untuk upload data RDI.")
         return
 
+    # Sidebar
+    st.sidebar.markdown("### Filter RDI")
+    def sbr(label, col, src):
+        if col not in src.columns: return "Semua"
+        opts = ["Semua"] + sorted(src[col].dropna().unique().tolist())
+        return st.sidebar.selectbox(label, opts, key=f"rdi_{col}")
+
+    sel_region = sbr("Region",       "Region",       df)
+    d0 = df if sel_region=="Semua" else df[df["Region"]==sel_region]
+    sel_area   = sbr("Nama Area",    "Nama Area",    d0)
+    d1 = d0 if sel_area=="Semua" else d0[d0["Nama Area"]==sel_area]
+    sel_jenis  = sbr("Jenis Outlet", "Jenis Outlet", d1)
+    sel_asm    = sbr("ASM",          "ASM",          d1)
+    sel_grp    = sbr("Grouping OS",  "Grouping OS",  d1)
+    sel_bkt    = st.sidebar.multiselect("Kelompok Aging", BUCKETS, default=BUCKETS, key="rdi_bkt")
+    st.sidebar.markdown("---")
+    if st.sidebar.button("Refresh RDI", use_container_width=True, key="ref_rdi"):
+        st.cache_data.clear(); st.rerun()
+    st.sidebar.caption(f"Terakhir diperbarui: {last_updated}")
+
+    # Filter
     dff = df.copy()
-    if filters["region"]!="Semua" and "Region"          in dff.columns: dff=dff[dff["Region"]         ==filters["region"]]
-    if filters["area"]  !="Semua" and "Nama Area"        in dff.columns: dff=dff[dff["Nama Area"]       ==filters["area"]]
-    if filters["asm"]   !="Semua" and "ASM"              in dff.columns: dff=dff[dff["ASM"]             ==filters["asm"]]
-    if filters["rbm"]   !="Semua" and "RBM"              in dff.columns: dff=dff[dff["RBM"]             ==filters["rbm"]]
-    if filters["sales"] !="Semua" and "Nama Sales"       in dff.columns: dff=dff[dff["Nama Sales"]      ==filters["sales"]]
-    if filters["jenis"] !="Semua" and "Jenis Outlet"     in dff.columns: dff=dff[dff["Jenis Outlet"]    ==filters["jenis"]]
-    if filters["toko"]  !="Semua" and "Nama Toko"        in dff.columns: dff=dff[dff["Nama Toko"]       ==filters["toko"]]
-    if filters["kat"]   !="Semua" and "Kategori Overdue" in dff.columns: dff=dff[dff["Kategori Overdue"]==filters["kat"]]
-    if filters["grp"]   !="Semua" and "Grouping OS"      in dff.columns: dff=dff[dff["Grouping OS"]     ==filters["grp"]]
-    if filters["top"]   !="Semua" and "TOP"              in dff.columns: dff=dff[dff["TOP"]             ==filters["top"]]
-    if filters["bkt"] and "KELOMPOK" in dff.columns: dff=dff[dff["KELOMPOK"].isin(filters["bkt"])]
-    if filters["so_kat"]!="Semua" and "KELOMPOK" in dff.columns:
-        df_so_tmp = dff[dff["KELOMPOK"]!="CURRENT"].copy()
-        df_so_tmp["_SO"] = df_so_tmp["KELOMPOK"].map(SO_MAP)
-        valid_nf = df_so_tmp[df_so_tmp["_SO"]==filters["so_kat"]]["No Faktur"]
-        dff = dff[dff["No Faktur"].isin(valid_nf)]
+    if sel_region!="Semua" and "Region"       in dff.columns: dff=dff[dff["Region"]==sel_region]
+    if sel_area  !="Semua" and "Nama Area"    in dff.columns: dff=dff[dff["Nama Area"]==sel_area]
+    if sel_jenis !="Semua" and "Jenis Outlet" in dff.columns: dff=dff[dff["Jenis Outlet"]==sel_jenis]
+    if sel_asm   !="Semua" and "ASM"          in dff.columns: dff=dff[dff["ASM"]==sel_asm]
+    if sel_grp   !="Semua" and "Grouping OS"  in dff.columns: dff=dff[dff["Grouping OS"]==sel_grp]
+    if sel_bkt and "KELOMPOK" in dff.columns: dff=dff[dff["KELOMPOK"].isin(sel_bkt)]
     if dff.empty:
         st.warning("Tidak ada data sesuai filter."); return
 
@@ -1557,29 +1590,11 @@ def render_change_password():
                     sb.table("app_users").update(
                         {"password": pwd_baru.strip()}
                     ).eq("nik", nik).execute()
-
-                    # Sync password baru ke master_login.xlsx di PC lokal
-                    _XLSX_LOGIN = r"D:\PROJECT FAD\MASTER UPLOADER\master_login.xlsx"
-                    try:
-                        import openpyxl as _opx
-                        _wb = _opx.load_workbook(_XLSX_LOGIN)
-                        _ws = _wb.active
-                        # Cari header row untuk tahu kolom NIK dan PASSWORD
-                        _headers = {str(cell.value).strip().upper(): cell.column
-                                    for cell in _ws[1] if cell.value}
-                        _col_nik  = _headers.get("NIIK", _headers.get("NIK", 1))
-                        _col_pass = _headers.get("PASSWORD", 3)
-                        for _row in _ws.iter_rows(min_row=2):
-                            if str(_row[_col_nik-1].value).strip() == nik:
-                                _row[_col_pass-1].value = pwd_baru.strip()
-                                break
-                        _wb.save(_XLSX_LOGIN)
-                    except Exception as _e:
-                        pass  # Gagal sync ke Excel tidak menghentikan proses
-
+                    # Clear cache dan reset session agar login ulang dengan password baru
                     load_users.clear()
                     st.session_state["pwd_changed"] = True
                     st.success("Password berhasil diperbarui. Silakan login ulang.")
+                    # Otomatis logout setelah 2 detik agar user login dengan password baru
                     import time as _time
                     _time.sleep(1.5)
                     for k in ["logged_in","user_nik","user_nama"]:
@@ -1618,82 +1633,13 @@ def main():
 
     render_change_password()
 
-    # ════════════════════════════════════════════════════════════
-    # UNIFIED SIDEBAR FILTER — 12 filter, satu untuk semua tab
-    # ════════════════════════════════════════════════════════════
-    st.sidebar.markdown(
-        "<div style='font-size:11px;font-weight:700;color:#B01C2E;"
-        "text-transform:uppercase;letter-spacing:.8px;padding:4px 0 8px'>"
-        "Filter</div>",
-        unsafe_allow_html=True,
-    )
-
-    _df_ref, _ = load_otc()
-
-    def _sel(label, col, src, key):
-        if col not in src.columns: return "Semua"
-        opts = ["Semua"] + sorted(src[col].dropna().unique().tolist())
-        return st.sidebar.selectbox(label, opts, key=key)
-
-    # Baris 1 — hierarki wilayah
-    sel_region  = _sel("Region",       "REGION",        _df_ref, "f_region")
-    _r0 = _df_ref if sel_region=="Semua" else _df_ref[_df_ref["REGION"]==sel_region]
-    sel_area    = _sel("Nama Area",    "NAMA AREA",     _r0,     "f_area")
-    _r1 = _r0 if sel_area=="Semua" else _r0[_r0["NAMA AREA"]==sel_area]
-
-    # Baris 2 — people
-    sel_asm     = _sel("ASM",          "ASM",           _r1,     "f_asm")
-    sel_rbm     = _sel("RBM",          "RBM",           _r1,     "f_rbm")
-    sel_sales   = _sel("Nama Sales",   "NAMA SALES",    _r1,     "f_sales")
-
-    # Baris 3 — outlet & toko
-    sel_channel = _sel("Channel / Jenis Outlet", "JENIS OUTLET", _r1, "f_channel")
-    sel_toko    = _sel("Nama Toko",    "NAMA TOKO",     _r1,     "f_toko")
-
-    # Baris 4 — kategori & TOP
-    sel_kat     = _sel("Kategori Overdue", "KATEGORI OVERDUE", _r1, "f_kat")
-    sel_grp     = _sel("Grouping OS",  "GROUPING OS",   _r1,     "f_grp")
-    sel_top     = _sel("TOP",          "TOP",           _r1,     "f_top")
-
-    # Baris 5 — aging
-    sel_bkt = st.sidebar.multiselect(
-        "Aging Days (Kelompok)", BUCKETS, default=BUCKETS, key="f_bkt"
-    )
-    sel_so_kat = st.sidebar.selectbox(
-        "SO Block",
-        ["Semua", "WARNING SO", "SOFT BLOCK", "CRITICAL BLOCK"],
-        key="f_so_kat"
-    )
-
-    st.sidebar.markdown("---")
-    if st.sidebar.button("Refresh Data", use_container_width=True, key="ref_all"):
-        st.cache_data.clear()
-        st.session_state["preloaded"] = False
-        st.rerun()
-    st.sidebar.caption("Cache refresh otomatis tiap 5 menit")
-
-    filters = {
-        "region":  sel_region,
-        "area":    sel_area,
-        "asm":     sel_asm,
-        "rbm":     sel_rbm,
-        "sales":   sel_sales,
-        "jenis":   sel_channel,
-        "toko":    sel_toko,
-        "kat":     sel_kat,
-        "grp":     sel_grp,
-        "top":     sel_top,
-        "bkt":     sel_bkt,
-        "so_kat":  sel_so_kat,
-    }
-
     tab1, tab2, tab3 = st.tabs(["AR OTC — MTI NKA", "AR GT", "AR RDI"])
     with tab1:
-        page_otc(filters)
+        page_otc()
     with tab2:
-        page_gt(filters)
+        page_gt()
     with tab3:
-        page_rdi(filters)
+        page_rdi()
 
 if __name__ == "__main__":
     main()
