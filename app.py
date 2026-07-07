@@ -8,7 +8,9 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 from supabase import create_client
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
+
+WIB = timezone(timedelta(hours=7))  # Asia/Jakarta, UTC+7 (tanpa DST)
 
 st.set_page_config(
     page_title="AR Dashboard — PMA FAD",
@@ -448,8 +450,9 @@ def load_otc():
         if meta.data:
             raw = meta.data[0].get("uploaded_at","")
             try:
-                dt = datetime.fromisoformat(raw.replace("Z","+07:00"))
-                last_updated = dt.strftime("%d %b %Y · %H:%M WIB")
+                dt = datetime.fromisoformat(raw.replace("Z","+00:00"))
+                dt_wib = dt.astimezone(WIB)
+                last_updated = dt_wib.strftime("%d %b %Y · %H:%M WIB")
             except Exception:
                 last_updated = raw
     except Exception:
@@ -492,7 +495,8 @@ def load_gt():
             raw = meta.data[0].get("uploaded_at","")
             try:
                 dt = datetime.fromisoformat(raw.replace("Z","+00:00"))
-                last_updated = dt.strftime("%d %b %Y · %H:%M WIB")
+                dt_wib = dt.astimezone(WIB)
+                last_updated = dt_wib.strftime("%d %b %Y · %H:%M WIB")
             except Exception:
                 last_updated = raw
     except Exception:
@@ -1199,7 +1203,8 @@ def load_rdi():
             raw = meta.data[0].get("uploaded_at","")
             try:
                 dt = datetime.fromisoformat(raw.replace("Z","+00:00"))
-                last_updated = dt.strftime("%d %b %Y · %H:%M WIB")
+                dt_wib = dt.astimezone(WIB)
+                last_updated = dt_wib.strftime("%d %b %Y · %H:%M WIB")
             except Exception:
                 last_updated = raw
     except Exception:
