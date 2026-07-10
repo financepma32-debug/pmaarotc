@@ -632,13 +632,13 @@ def page_otc():
     # ── SIDEBAR ───────────────────────────────────────────────────
     st.sidebar.markdown("### Filter OTC")
     def sb(label, col, src):
-        opts = ["Semua"] + sorted(src[col].dropna().unique().tolist())
-        return st.sidebar.selectbox(label, opts, key=f"otc_{col}")
+        opts = sorted(src[col].dropna().unique().tolist())
+        return st.sidebar.multiselect(label, opts, default=[], key=f"otc_{col}")
 
     sel_region = sb("Region",       "REGION",       df)
-    d0 = df if sel_region=="Semua" else df[df["REGION"]==sel_region]
+    d0 = df if not sel_region else df[df["REGION"].isin(sel_region)]
     sel_area   = sb("Nama Area",    "NAMA AREA",    d0)
-    d1 = d0 if sel_area=="Semua" else d0[d0["NAMA AREA"]==sel_area]
+    d1 = d0 if not sel_area else d0[d0["NAMA AREA"].isin(sel_area)]
     sel_jenis  = sb("Jenis Outlet", "JENIS OUTLET", d1)
     sel_asm    = sb("ASM",          "ASM",          d1)
     sel_rbm    = sb("RBM",          "RBM",          d1)
@@ -650,13 +650,13 @@ def page_otc():
     st.sidebar.caption(f"Terakhir diperbarui: {last_updated}")
 
     dff = df.copy()
-    if sel_region!="Semua": dff=dff[dff["REGION"]      ==sel_region]
-    if sel_area  !="Semua": dff=dff[dff["NAMA AREA"]   ==sel_area]
-    if sel_jenis !="Semua": dff=dff[dff["JENIS OUTLET"] ==sel_jenis]
-    if sel_asm   !="Semua": dff=dff[dff["ASM"]         ==sel_asm]
-    if sel_rbm   !="Semua": dff=dff[dff["RBM"]         ==sel_rbm]
-    if sel_grp   !="Semua": dff=dff[dff["GROUPING OS"] ==sel_grp]
-    if sel_bkt:              dff=dff[dff["KELOMPOK"].isin(sel_bkt)]
+    if sel_region: dff=dff[dff["REGION"]      .isin(sel_region)]
+    if sel_area  : dff=dff[dff["NAMA AREA"]   .isin(sel_area)]
+    if sel_jenis : dff=dff[dff["JENIS OUTLET"].isin(sel_jenis)]
+    if sel_asm   : dff=dff[dff["ASM"]         .isin(sel_asm)]
+    if sel_rbm   : dff=dff[dff["RBM"]         .isin(sel_rbm)]
+    if sel_grp   : dff=dff[dff["GROUPING OS"] .isin(sel_grp)]
+    if sel_bkt:    dff=dff[dff["KELOMPOK"].isin(sel_bkt)]
     if dff.empty:
         st.warning("Tidak ada data sesuai filter."); return
 
@@ -918,13 +918,13 @@ def page_gt():
     # ── SIDEBAR ───────────────────────────────────────────────────
     st.sidebar.markdown("### Filter OTC")
     def sb(label, col, src):
-        opts = ["Semua"] + sorted(src[col].dropna().unique().tolist())
-        return st.sidebar.selectbox(label, opts, key=f"gt_{col}")
+        opts = sorted(src[col].dropna().unique().tolist())
+        return st.sidebar.multiselect(label, opts, default=[], key=f"gt_{col}")
 
     sel_region = sb("Region",       "Region",       df)
-    d0 = df if sel_region=="Semua" else df[df["Region"]==sel_region]
+    d0 = df if not sel_region else df[df["Region"].isin(sel_region)]
     sel_area   = sb("Nama Area",    "Nama Area",    d0)
-    d1 = d0 if sel_area=="Semua" else d0[d0["Nama Area"]==sel_area]
+    d1 = d0 if not sel_area else d0[d0["Nama Area"].isin(sel_area)]
     sel_jenis  = sb("Jenis Outlet", "Jenis Outlet", d1)
     sel_asm    = sb("ASM",          "ASM",          d1)
     sel_rbm    = sb("RBM",          "RBM",          d1)
@@ -936,13 +936,13 @@ def page_gt():
     st.sidebar.caption(f"Update GT: {last_updated}")
 
     dff = df.copy()
-    if sel_region!="Semua": dff=dff[dff["Region"]      ==sel_region]
-    if sel_area  !="Semua": dff=dff[dff["Nama Area"]   ==sel_area]
-    if sel_jenis !="Semua": dff=dff[dff["Jenis Outlet"] ==sel_jenis]
-    if sel_asm   !="Semua": dff=dff[dff["ASM"]         ==sel_asm]
-    if sel_rbm   !="Semua": dff=dff[dff["RBM"]         ==sel_rbm]
-    if sel_grp   !="Semua": dff=dff[dff["Grouping OS"] ==sel_grp]
-    if sel_bkt:              dff=dff[dff["KELOMPOK"].isin(sel_bkt)]
+    if sel_region: dff=dff[dff["Region"]      .isin(sel_region)]
+    if sel_area  : dff=dff[dff["Nama Area"]   .isin(sel_area)]
+    if sel_jenis : dff=dff[dff["Jenis Outlet"].isin(sel_jenis)]
+    if sel_asm   : dff=dff[dff["ASM"]         .isin(sel_asm)]
+    if sel_rbm   : dff=dff[dff["RBM"]         .isin(sel_rbm)]
+    if sel_grp   : dff=dff[dff["Grouping OS"] .isin(sel_grp)]
+    if sel_bkt:    dff=dff[dff["KELOMPOK"].isin(sel_bkt)]
     if dff.empty:
         st.warning("Tidak ada data sesuai filter."); return
 
@@ -1271,14 +1271,14 @@ def page_rdi():
     # Sidebar
     st.sidebar.markdown("### Filter RDI")
     def sbr(label, col, src):
-        if col not in src.columns: return "Semua"
-        opts = ["Semua"] + sorted(src[col].dropna().unique().tolist())
-        return st.sidebar.selectbox(label, opts, key=f"rdi_{col}")
+        if col not in src.columns: return []
+        opts = sorted(src[col].dropna().unique().tolist())
+        return st.sidebar.multiselect(label, opts, default=[], key=f"rdi_{col}")
 
     sel_region = sbr("Region",       "Region",       df)
-    d0 = df if sel_region=="Semua" else df[df["Region"]==sel_region]
+    d0 = df if not sel_region else df[df["Region"].isin(sel_region)]
     sel_area   = sbr("Nama Area",    "Nama Area",    d0)
-    d1 = d0 if sel_area=="Semua" else d0[d0["Nama Area"]==sel_area]
+    d1 = d0 if not sel_area else d0[d0["Nama Area"].isin(sel_area)]
     sel_jenis  = sbr("Jenis Outlet", "Jenis Outlet", d1)
     sel_asm    = sbr("ASM",          "ASM",          d1)
     sel_grp    = sbr("Grouping OS",  "Grouping OS",  d1)
@@ -1290,11 +1290,11 @@ def page_rdi():
 
     # Filter
     dff = df.copy()
-    if sel_region!="Semua" and "Region"       in dff.columns: dff=dff[dff["Region"]==sel_region]
-    if sel_area  !="Semua" and "Nama Area"    in dff.columns: dff=dff[dff["Nama Area"]==sel_area]
-    if sel_jenis !="Semua" and "Jenis Outlet" in dff.columns: dff=dff[dff["Jenis Outlet"]==sel_jenis]
-    if sel_asm   !="Semua" and "ASM"          in dff.columns: dff=dff[dff["ASM"]==sel_asm]
-    if sel_grp   !="Semua" and "Grouping OS"  in dff.columns: dff=dff[dff["Grouping OS"]==sel_grp]
+    if sel_region and "Region"       in dff.columns: dff=dff[dff["Region"].isin(sel_region)]
+    if sel_area   and "Nama Area"    in dff.columns: dff=dff[dff["Nama Area"].isin(sel_area)]
+    if sel_jenis  and "Jenis Outlet" in dff.columns: dff=dff[dff["Jenis Outlet"].isin(sel_jenis)]
+    if sel_asm    and "ASM"          in dff.columns: dff=dff[dff["ASM"].isin(sel_asm)]
+    if sel_grp    and "Grouping OS"  in dff.columns: dff=dff[dff["Grouping OS"].isin(sel_grp)]
     if sel_bkt and "KELOMPOK" in dff.columns: dff=dff[dff["KELOMPOK"].isin(sel_bkt)]
     if dff.empty:
         st.warning("Tidak ada data sesuai filter."); return
