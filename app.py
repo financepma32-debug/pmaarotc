@@ -1633,16 +1633,17 @@ def main():
         if tab_sel != "— Pilih Data —":
             st.rerun()
 
-    # Belum pilih → tampilkan pesan, jangan render filter dan tab
+    # Belum pilih → sembunyikan filter, tetap tampilkan konten OTC default
     if tab_sel == "— Pilih Data —":
         st.sidebar.markdown(
             "<div style='font-size:12px;color:#9CA3AF;padding:8px 0'>"
-            "Pilih data terlebih dahulu untuk mengaktifkan filter.</div>",
+            "Pilih data di atas untuk mengaktifkan filter.</div>",
             unsafe_allow_html=True)
-        st.markdown(
-            "<div style='text-align:center;padding:80px 0;color:#9CA3AF;font-size:14px'>"
-            "Silakan pilih data yang ingin ditampilkan<br>melalui menu <b>Lihat Data</b> di sidebar.</div>",
-            unsafe_allow_html=True)
+        # Tampilkan tab tanpa filter
+        tab1, tab2, tab3 = st.tabs(["AR OTC — MTI NKA", "AR GT", "AR RDI"])
+        with tab1: page_otc({})
+        with tab2: page_gt({})
+        with tab3: page_rdi({})
         return
 
     # Load data referensi sesuai tab yang dipilih
