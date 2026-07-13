@@ -1451,7 +1451,7 @@ def preload_all():
 # ═══════════════════════════════════════════════════════════════
 # AUTH — Login dengan NIK + Password
 # ═══════════════════════════════════════════════════════════════
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=30, show_spinner=False)
 def load_users() -> dict:
     """Ambil daftar user dari tabel app_users di Supabase."""
     try:
