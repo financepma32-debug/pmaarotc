@@ -709,7 +709,7 @@ def page_otc(filters=None):
 
     # Chart distribusi SO Block per area (top 10)
     sec("DISTRIBUSI SO BLOCK PER NAMA AREA")
-    pivot = (df_ov.groupby(["NAMA AREA","SO Status"])["NOMINAL"]
+    pivot = (df_ov.groupby(["NAMA AREA","SO Kat"])["NOMINAL"]
              .sum().unstack(fill_value=0).reset_index())
     for k in ["WARNING SO","SOFT BLOCK","CRITICAL BLOCK"]:
         if k not in pivot.columns: pivot[k]=0
@@ -932,7 +932,7 @@ def page_gt(filters=None):
 
     # Chart distribusi SO Block per area (top 10)
     sec("DISTRIBUSI SO BLOCK PER NAMA AREA")
-    pivot = (df_ov.groupby(["Nama Area","SO Status"])["Nominal"]
+    pivot = (df_ov.groupby(["Nama Area","SO Kat"])["Nominal"]
              .sum().unstack(fill_value=0).reset_index())
     for k in ["WARNING SO","SOFT BLOCK","CRITICAL BLOCK"]:
         if k not in pivot.columns: pivot[k]=0
