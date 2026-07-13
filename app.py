@@ -679,13 +679,15 @@ def page_otc(filters=None):
     })
 
     grp_cols = [c for c in ["RBM","NAMA AREA","No Faktur SAP","NAMA TOKO"] if c in df_ov.columns]
-    tbl_so = df_ov.groupby(grp_cols).apply(lambda g: pd.Series({
-        "Qty Faktur":        len(g),
-        "Warning SO":        g.loc[g["SO Kat"]=="WARNING SO","NOMINAL"].sum(),
-        "Block SO":          g.loc[g["SO Kat"]=="BLOCK SO","NOMINAL"].sum(),
-        "Critical Block SO": g.loc[g["SO Kat"]=="CRITICAL BLOCK SO","NOMINAL"].sum(),
-        "Total Nilai Faktur":g["Nilai Faktur"].sum() if "Nilai Faktur" in g.columns else g["NOMINAL"].sum(),
-    }), include_groups=False).reset_index()
+    def _agg_otc(g):
+        return pd.Series({
+            "Qty Faktur":        len(g),
+            "Warning SO":        g.loc[g["SO Kat"]=="WARNING SO","NOMINAL"].sum(),
+            "Block SO":          g.loc[g["SO Kat"]=="BLOCK SO","NOMINAL"].sum(),
+            "Critical Block SO": g.loc[g["SO Kat"]=="CRITICAL BLOCK SO","NOMINAL"].sum(),
+            "Total Nilai Faktur":g["Nilai Faktur"].sum() if "Nilai Faktur" in g.columns else g["NOMINAL"].sum(),
+        })
+    tbl_so = df_ov.groupby(grp_cols)[["SO Kat","NOMINAL","Nilai Faktur"]].apply(_agg_otc).reset_index()
 
     tbl_so = tbl_so[(tbl_so["Warning SO"]!=0)|(tbl_so["Block SO"]!=0)|(tbl_so["Critical Block SO"]!=0)]
     tbl_so = tbl_so.sort_values("Critical Block SO", ascending=False).reset_index(drop=True)
@@ -901,13 +903,15 @@ def page_gt(filters=None):
     })
 
     grp_cols = [c for c in ["RBM","Nama Area","No Faktur SAP","Nama Toko"] if c in df_ov.columns]
-    tbl_so = df_ov.groupby(grp_cols).apply(lambda g: pd.Series({
-        "Qty Faktur":        len(g),
-        "Warning SO":        g.loc[g["SO Kat"]=="WARNING SO","Nominal"].sum(),
-        "Block SO":          g.loc[g["SO Kat"]=="BLOCK SO","Nominal"].sum(),
-        "Critical Block SO": g.loc[g["SO Kat"]=="CRITICAL BLOCK SO","Nominal"].sum(),
-        "Total Nilai Faktur":g["Nilai Faktur"].sum() if "Nilai Faktur" in g.columns else g["Nominal"].sum(),
-    }), include_groups=False).reset_index()
+    def _agg_gt(g):
+        return pd.Series({
+            "Qty Faktur":        len(g),
+            "Warning SO":        g.loc[g["SO Kat"]=="WARNING SO","Nominal"].sum(),
+            "Block SO":          g.loc[g["SO Kat"]=="BLOCK SO","Nominal"].sum(),
+            "Critical Block SO": g.loc[g["SO Kat"]=="CRITICAL BLOCK SO","Nominal"].sum(),
+            "Total Nilai Faktur":g["Nilai Faktur"].sum() if "Nilai Faktur" in g.columns else g["Nominal"].sum(),
+        })
+    tbl_so = df_ov.groupby(grp_cols)[["SO Kat","Nominal","Nilai Faktur"]].apply(_agg_gt).reset_index()
 
     tbl_so = tbl_so[(tbl_so["Warning SO"]!=0)|(tbl_so["Block SO"]!=0)|(tbl_so["Critical Block SO"]!=0)]
     tbl_so = tbl_so.sort_values("Critical Block SO", ascending=False).reset_index(drop=True)
@@ -1196,13 +1200,15 @@ def page_rdi(filters=None):
     })
 
     grp_cols = [c for c in ["RBM","Nama Area","No Faktur SAP","Nama Toko"] if c in df_ov.columns]
-    tbl_so = df_ov.groupby(grp_cols).apply(lambda g: pd.Series({
-        "Qty Faktur":        len(g),
-        "Warning SO":        g.loc[g["SO Kat"]=="WARNING SO","Nominal"].sum(),
-        "Block SO":          g.loc[g["SO Kat"]=="BLOCK SO","Nominal"].sum(),
-        "Critical Block SO": g.loc[g["SO Kat"]=="CRITICAL BLOCK SO","Nominal"].sum(),
-        "Total Nilai Faktur":g["Nilai Faktur"].sum() if "Nilai Faktur" in g.columns else g["Nominal"].sum(),
-    }), include_groups=False).reset_index()
+    def _agg_gt(g):
+        return pd.Series({
+            "Qty Faktur":        len(g),
+            "Warning SO":        g.loc[g["SO Kat"]=="WARNING SO","Nominal"].sum(),
+            "Block SO":          g.loc[g["SO Kat"]=="BLOCK SO","Nominal"].sum(),
+            "Critical Block SO": g.loc[g["SO Kat"]=="CRITICAL BLOCK SO","Nominal"].sum(),
+            "Total Nilai Faktur":g["Nilai Faktur"].sum() if "Nilai Faktur" in g.columns else g["Nominal"].sum(),
+        })
+    tbl_so = df_ov.groupby(grp_cols)[["SO Kat","Nominal","Nilai Faktur"]].apply(_agg_gt).reset_index()
 
     tbl_so = tbl_so[(tbl_so["Warning SO"]!=0)|(tbl_so["Block SO"]!=0)|(tbl_so["Critical Block SO"]!=0)]
     tbl_so = tbl_so.sort_values("Critical Block SO", ascending=False).reset_index(drop=True)
