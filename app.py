@@ -679,7 +679,7 @@ def page_otc(filters=None):
     }).fillna("Warning SO")
 
     # Pivot menggunakan pivot_table — kompatibel semua versi pandas
-    grp_cols = [c for c in ["RBM","NAMA AREA","No Faktur SAP","NAMA TOKO"] if c in df_ov.columns]
+    grp_cols = [c for c in ["RBM","NAMA AREA","NAMA TOKO"] if c in df_ov.columns]
     if grp_cols:
         # Qty faktur per toko
         qty = df_ov.groupby(grp_cols)["No Faktur"].count().reset_index().rename(columns={"No Faktur":"Qty Faktur"})
@@ -908,7 +908,7 @@ def page_gt(filters=None):
         "91-120 DAYS":"Critical Block SO","121+ DAYS":"Critical Block SO","<2026":"Critical Block SO",
     }).fillna("Warning SO")
 
-    grp_cols = [c for c in ["RBM","Nama Area","No Faktur SAP","Nama Toko"] if c in df_ov.columns]
+    grp_cols = [c for c in ["RBM","Nama Area","Nama Toko"] if c in df_ov.columns]
     if grp_cols:
         qty = df_ov.groupby(grp_cols)["No Faktur"].count().reset_index().rename(columns={"No Faktur":"Qty Faktur"})
         piv = df_ov.pivot_table(index=grp_cols, columns="SO Kat", values="Nominal", aggfunc="sum", fill_value=0).reset_index()
@@ -1204,7 +1204,7 @@ def page_rdi(filters=None):
         "91-120 DAYS":"Critical Block SO","121+ DAYS":"Critical Block SO","<2026":"Critical Block SO",
     }).fillna("Warning SO")
 
-    grp_cols = [c for c in ["RBM","Nama Area","No Faktur SAP","Nama Toko"] if c in df_ov.columns]
+    grp_cols = [c for c in ["RBM","Nama Area","Nama Toko"] if c in df_ov.columns]
     if grp_cols:
         qty = df_ov.groupby(grp_cols)["No Faktur"].count().reset_index().rename(columns={"No Faktur":"Qty Faktur"})
         piv = df_ov.pivot_table(index=grp_cols, columns="SO Kat", values="Nominal", aggfunc="sum", fill_value=0).reset_index()
