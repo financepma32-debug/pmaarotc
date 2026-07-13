@@ -1616,12 +1616,13 @@ def main():
         unsafe_allow_html=True)
 
     # Pilih sumber data untuk opsi filter
-    prev_tab = st.session_state.get("f_tab_prev", "AR OTC — MTI NKA")
+    prev_tab = st.session_state.get("f_tab_prev", None)
     tab_sel = st.sidebar.selectbox(
         "Lihat Data",
-        ["AR OTC — MTI NKA", "AR GT", "AR RDI"],
+        ["— Pilih Data —", "AR OTC — MTI NKA", "AR GT", "AR RDI"],
         key="f_tab_sel"
     )
+
     # Reset semua filter saat tab berubah
     if tab_sel != prev_tab:
         for k in ["f_region","f_area","f_asm","f_rbm","f_sales",
@@ -1629,8 +1630,20 @@ def main():
             if k in st.session_state:
                 del st.session_state[k]
         st.session_state["f_tab_prev"] = tab_sel
-        st.rerun()
-    st.session_state["f_tab_prev"] = tab_sel
+        if tab_sel != "— Pilih Data —":
+            st.rerun()
+
+    # Belum pilih → tampilkan pesan, jangan render filter dan tab
+    if tab_sel == "— Pilih Data —":
+        st.sidebar.markdown(
+            "<div style='font-size:12px;color:#9CA3AF;padding:8px 0'>"
+            "Pilih data terlebih dahulu untuk mengaktifkan filter.</div>",
+            unsafe_allow_html=True)
+        st.markdown(
+            "<div style='text-align:center;padding:80px 0;color:#9CA3AF;font-size:14px'>"
+            "Silakan pilih data yang ingin ditampilkan<br>melalui menu <b>Lihat Data</b> di sidebar.</div>",
+            unsafe_allow_html=True)
+        return
 
     # Load data referensi sesuai tab yang dipilih
     if tab_sel == "AR OTC — MTI NKA":
