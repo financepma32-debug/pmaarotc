@@ -671,88 +671,33 @@ def page_otc(filters=None):
     # ════ SO BLOCK — 1 TABEL dengan kolom SO Status, Area, Kode Customer, dll ════
     sec("STATUS SO BLOCK — REKOMENDASI TINDAKAN")
 
-    df_ov = dff[dff["KELOMPOK"]!="CURRENT"].copy()
-    df_ov["SO Status"] = df_ov["KELOMPOK"].map(SO_MAP)
+    df_ov = dff.copy()
+    df_ov["SO Kat"] = df_ov["KELOMPOK"].map({
+        "CURRENT":"WARNING SO","1-7 DAYS":"WARNING SO","8-30 DAYS":"WARNING SO",
+        "31-60 DAYS":"BLOCK SO","61-90 DAYS":"BLOCK SO",
+        "91-120 DAYS":"CRITICAL BLOCK SO","121+ DAYS":"CRITICAL BLOCK SO","<2026":"CRITICAL BLOCK SO",
+    })
 
-    wn = df_ov[df_ov["SO Status"]=="WARNING SO"]["NOMINAL"].sum()
-    sn = df_ov[df_ov["SO Status"]=="SOFT BLOCK"]["NOMINAL"].sum()
-    cn = df_ov[df_ov["SO Status"]=="CRITICAL BLOCK"]["NOMINAL"].sum()
-    wf = (df_ov["SO Status"]=="WARNING SO").sum()
-    sf = (df_ov["SO Status"]=="SOFT BLOCK").sum()
-    cf = (df_ov["SO Status"]=="CRITICAL BLOCK").sum()
-    wa = df_ov[df_ov["SO Status"]=="WARNING SO"]["NAMA AREA"].nunique()
-    sa = df_ov[df_ov["SO Status"]=="SOFT BLOCK"]["NAMA AREA"].nunique()
-    ca = df_ov[df_ov["SO Status"]=="CRITICAL BLOCK"]["NAMA AREA"].nunique()
+    grp_cols = [c for c in ["RBM","NAMA AREA","No Faktur SAP","NAMA TOKO"] if c in df_ov.columns]
+    tbl_so = df_ov.groupby(grp_cols).apply(lambda g: pd.Series({
+        "Qty Faktur":        len(g),
+        "Warning SO":        g.loc[g["SO Kat"]=="WARNING SO","NOMINAL"].sum(),
+        "Block SO":          g.loc[g["SO Kat"]=="BLOCK SO","NOMINAL"].sum(),
+        "Critical Block SO": g.loc[g["SO Kat"]=="CRITICAL BLOCK SO","NOMINAL"].sum(),
+        "Total Nilai Faktur":g["Nilai Faktur"].sum() if "Nilai Faktur" in g.columns else g["NOMINAL"].sum(),
+    }), include_groups=False).reset_index()
 
-    st.markdown(f"""
-    <div class="so-wrap">
-      <div class="so-card warn">
-        <span class="so-tag warn"><span class="so-tag-dot"></span>Warning SO</span>
-        <p class="so-val">{M(wn)}</p>
-        <p class="so-sub">{wf:,} faktur · {wa} area</p>
-        <p class="so-desc">1–7 hari & 8–30 hari — segera follow up</p>
-      </div>
-      <div class="so-card soft">
-        <span class="so-tag soft"><span class="so-tag-dot"></span>Soft Block</span>
-        <p class="so-val">{M(sn)}</p>
-        <p class="so-sub">{sf:,} faktur · {sa} area</p>
-        <p class="so-desc">31–60 & 61–90 hari — hold pengiriman baru</p>
-      </div>
-      <div class="so-card crit">
-        <span class="so-tag crit"><span class="so-tag-dot"></span>Critical Block</span>
-        <p class="so-val">{M(cn)}</p>
-        <p class="so-sub">{cf:,} faktur · {ca} area</p>
-        <p class="so-desc">91+ hari & &lt;2026 — blokir SO, eskalasi manajemen</p>
-      </div>
-    </div>
-    """, unsafe_allow_html=True)
+    tbl_so = tbl_so[(tbl_so["Warning SO"]!=0)|(tbl_so["Block SO"]!=0)|(tbl_so["Critical Block SO"]!=0)]
+    tbl_so = tbl_so.sort_values("Critical Block SO", ascending=False).reset_index(drop=True)
+    tbl_so.insert(0,"Nomor", range(1, len(tbl_so)+1))
+    tbl_so.rename(columns={"NAMA AREA":"Nama Area","NAMA TOKO":"Nama Toko","No Faktur SAP":"Kode Customer"}, inplace=True)
+    for col in ["Warning SO","Block SO","Critical Block SO","Total Nilai Faktur"]:
+        if col in tbl_so.columns:
+            tbl_so[col] = tbl_so[col].apply(lambda x: f"{x:,.0f}" if x!=0 else "-")
 
-    # SATU TABEL SO BLOCK — kolom: Status | Area | Nama Toko | ASM | RBM | No Faktur | Qty | Nilai Faktur
-    # Kode Customer = No Faktur SAP (identitas customer di SAP)
-    so_cols_src = {
-        "SO Status":     "SO Status",
-        "Nama Area":     "NAMA AREA",
-        "Kode Customer": "No Faktur SAP",
-        "Nama Toko":     "NAMA TOKO",
-        "ASM":           "ASM",
-        "RBM":           "RBM",
-        "No Faktur":     "No Faktur",
-        "Kelompok":      "KELOMPOK",
-    }
-    tbl_so = df_ov.copy()
-    # Qty faktur per toko per SO Status — dibangun dari groupby
-    so_out_cols = ["SO Status","NAMA AREA","No Faktur SAP","NAMA TOKO","ASM","RBM",
-                   "No Faktur","KELOMPOK","NOMINAL","Nilai Faktur"]
-    so_out_cols = [c for c in so_out_cols if c in tbl_so.columns]
-    tbl_so = tbl_so[so_out_cols].copy()
+    st.dataframe(tbl_so, use_container_width=True, hide_index=True, height=440)
+    dl_btn(df_ov, "SO_BLOCK_DETAIL", "Download SO Block Detail")
 
-    # Tambah kolom Qty Faktur per Nama Toko
-    qty_map = tbl_so.groupby("NAMA TOKO")["No Faktur"].transform("count") if "NAMA TOKO" in tbl_so.columns else 0
-    tbl_so.insert(tbl_so.columns.get_loc("No Faktur")+1 if "No Faktur" in tbl_so.columns else len(tbl_so.columns),
-                  "Qty Faktur", qty_map)
-
-    # Format angka
-    for c in ["NOMINAL","Nilai Faktur"]:
-        if c in tbl_so.columns: tbl_so[c] = tbl_so[c].apply(M)
-
-    # Rename kolom akhir
-    rename_map = {
-        "SO Status":"SO Status","NAMA AREA":"Nama Area","No Faktur SAP":"Kode Customer",
-        "NAMA TOKO":"Nama Toko","ASM":"ASM","RBM":"RBM",
-        "No Faktur":"No Faktur","Qty Faktur":"Qty Faktur",
-        "NOMINAL":"Nilai OS","Nilai Faktur":"Nilai Faktur","KELOMPOK":"Kelompok",
-    }
-    tbl_so.rename(columns=rename_map, inplace=True)
-    tbl_so.insert(0,"#",range(1,len(tbl_so)+1))
-
-    # Urutkan: Critical dulu, lalu Soft Block, lalu Warning SO
-    order = {"CRITICAL BLOCK":0,"SOFT BLOCK":1,"WARNING SO":2}
-    if "SO Status" in tbl_so.columns:
-        tbl_so["_ord"] = tbl_so["SO Status"].map(order).fillna(3)
-        tbl_so = tbl_so.sort_values("_ord").drop(columns="_ord")
-
-    st.dataframe(tbl_so, use_container_width=True, hide_index=True, height=400)
-    dl_btn(df_ov[so_out_cols], "SO_BLOCK_DETAIL", "Download SO Block Detail")
 
     # Chart distribusi SO Block per area (top 10)
     sec("DISTRIBUSI SO BLOCK PER NAMA AREA")
@@ -946,90 +891,35 @@ def page_gt(filters=None):
     bv, grand = bucket_strip(dff)
 
     # ════ SO BLOCK — 1 TABEL dengan kolom SO Status, Area, Kode Customer, dll ════
-    sec("STATUS SO BLOCK — REKOMENDASI TINDAKAN")
+    sec("STATUS SO BLOCK GT — REKOMENDASI TINDAKAN")
 
-    df_ov = dff[dff["KELOMPOK"]!="CURRENT"].copy()
-    df_ov["SO Status"] = df_ov["KELOMPOK"].map(SO_MAP)
+    df_ov = dff.copy()
+    df_ov["SO Kat"] = df_ov["KELOMPOK"].map({
+        "CURRENT":"WARNING SO","1-7 DAYS":"WARNING SO","8-30 DAYS":"WARNING SO",
+        "31-60 DAYS":"BLOCK SO","61-90 DAYS":"BLOCK SO",
+        "91-120 DAYS":"CRITICAL BLOCK SO","121+ DAYS":"CRITICAL BLOCK SO","<2026":"CRITICAL BLOCK SO",
+    })
 
-    wn = df_ov[df_ov["SO Status"]=="WARNING SO"]["Nominal"].sum()
-    sn = df_ov[df_ov["SO Status"]=="SOFT BLOCK"]["Nominal"].sum()
-    cn = df_ov[df_ov["SO Status"]=="CRITICAL BLOCK"]["Nominal"].sum()
-    wf = (df_ov["SO Status"]=="WARNING SO").sum()
-    sf = (df_ov["SO Status"]=="SOFT BLOCK").sum()
-    cf = (df_ov["SO Status"]=="CRITICAL BLOCK").sum()
-    wa = df_ov[df_ov["SO Status"]=="WARNING SO"]["Nama Area"].nunique()
-    sa = df_ov[df_ov["SO Status"]=="SOFT BLOCK"]["Nama Area"].nunique()
-    ca = df_ov[df_ov["SO Status"]=="CRITICAL BLOCK"]["Nama Area"].nunique()
+    grp_cols = [c for c in ["RBM","Nama Area","No Faktur SAP","Nama Toko"] if c in df_ov.columns]
+    tbl_so = df_ov.groupby(grp_cols).apply(lambda g: pd.Series({
+        "Qty Faktur":        len(g),
+        "Warning SO":        g.loc[g["SO Kat"]=="WARNING SO","Nominal"].sum(),
+        "Block SO":          g.loc[g["SO Kat"]=="BLOCK SO","Nominal"].sum(),
+        "Critical Block SO": g.loc[g["SO Kat"]=="CRITICAL BLOCK SO","Nominal"].sum(),
+        "Total Nilai Faktur":g["Nilai Faktur"].sum() if "Nilai Faktur" in g.columns else g["Nominal"].sum(),
+    }), include_groups=False).reset_index()
 
-    st.markdown(f"""
-    <div class="so-wrap">
-      <div class="so-card warn">
-        <span class="so-tag warn"><span class="so-tag-dot"></span>Warning SO</span>
-        <p class="so-val">{M(wn)}</p>
-        <p class="so-sub">{wf:,} faktur · {wa} area</p>
-        <p class="so-desc">1–7 hari & 8–30 hari — segera follow up</p>
-      </div>
-      <div class="so-card soft">
-        <span class="so-tag soft"><span class="so-tag-dot"></span>Soft Block</span>
-        <p class="so-val">{M(sn)}</p>
-        <p class="so-sub">{sf:,} faktur · {sa} area</p>
-        <p class="so-desc">31–60 & 61–90 hari — hold pengiriman baru</p>
-      </div>
-      <div class="so-card crit">
-        <span class="so-tag crit"><span class="so-tag-dot"></span>Critical Block</span>
-        <p class="so-val">{M(cn)}</p>
-        <p class="so-sub">{cf:,} faktur · {ca} area</p>
-        <p class="so-desc">91+ hari & &lt;2026 — blokir SO, eskalasi manajemen</p>
-      </div>
-    </div>
-    """, unsafe_allow_html=True)
+    tbl_so = tbl_so[(tbl_so["Warning SO"]!=0)|(tbl_so["Block SO"]!=0)|(tbl_so["Critical Block SO"]!=0)]
+    tbl_so = tbl_so.sort_values("Critical Block SO", ascending=False).reset_index(drop=True)
+    tbl_so.insert(0,"Nomor", range(1, len(tbl_so)+1))
+    tbl_so.rename(columns={"No Faktur SAP":"Kode Customer"}, inplace=True)
+    for col in ["Warning SO","Block SO","Critical Block SO","Total Nilai Faktur"]:
+        if col in tbl_so.columns:
+            tbl_so[col] = tbl_so[col].apply(lambda x: f"{x:,.0f}" if x!=0 else "-")
 
-    # SATU TABEL SO BLOCK — kolom: Status | Area | Nama Toko | ASM | RBM | No Faktur | Qty | Nilai Faktur
-    # Kode Customer = No Faktur SAP (identitas customer di SAP)
-    so_cols_src = {
-        "SO Status":     "SO Status",
-        "Nama Area":     "Nama Area",
-        "Kode Customer": "No Faktur SAP",
-        "Nama Toko":     "Nama Toko",
-        "ASM":           "ASM",
-        "RBM":           "RBM",
-        "No Faktur":     "No Faktur",
-        "Kelompok":      "KELOMPOK",
-    }
-    tbl_so = df_ov.copy()
-    # Qty faktur per toko per SO Status — dibangun dari groupby
-    so_out_cols = ["SO Status","Nama Area","No Faktur SAP","Nama Toko","ASM","RBM",
-                   "No Faktur","KELOMPOK","Nominal","Nilai Faktur"]
-    so_out_cols = [c for c in so_out_cols if c in tbl_so.columns]
-    tbl_so = tbl_so[so_out_cols].copy()
+    st.dataframe(tbl_so, use_container_width=True, hide_index=True, height=440)
+    dl_btn(df_ov, "GT_SO_BLOCK_DETAIL", "Download SO Block GT")
 
-    # Tambah kolom Qty Faktur per Nama Toko
-    qty_map = tbl_so.groupby("Nama Toko")["No Faktur"].transform("count") if "Nama Toko" in tbl_so.columns else 0
-    tbl_so.insert(tbl_so.columns.get_loc("No Faktur")+1 if "No Faktur" in tbl_so.columns else len(tbl_so.columns),
-                  "Qty Faktur", qty_map)
-
-    # Format angka
-    for c in ["Nominal","Nilai Faktur"]:
-        if c in tbl_so.columns: tbl_so[c] = tbl_so[c].apply(M)
-
-    # Rename kolom akhir
-    rename_map = {
-        "SO Status":"SO Status","Nama Area":"Nama Area","No Faktur SAP":"Kode Customer",
-        "Nama Toko":"Nama Toko","ASM":"ASM","RBM":"RBM",
-        "No Faktur":"No Faktur","Qty Faktur":"Qty Faktur",
-        "Nominal":"Nilai OS","Nilai Faktur":"Nilai Faktur","KELOMPOK":"Kelompok",
-    }
-    tbl_so.rename(columns=rename_map, inplace=True)
-    tbl_so.insert(0,"#",range(1,len(tbl_so)+1))
-
-    # Urutkan: Critical dulu, lalu Soft Block, lalu Warning SO
-    order = {"CRITICAL BLOCK":0,"SOFT BLOCK":1,"WARNING SO":2}
-    if "SO Status" in tbl_so.columns:
-        tbl_so["_ord"] = tbl_so["SO Status"].map(order).fillna(3)
-        tbl_so = tbl_so.sort_values("_ord").drop(columns="_ord")
-
-    st.dataframe(tbl_so, use_container_width=True, hide_index=True, height=400)
-    dl_btn(df_ov[so_out_cols], "GT_SO_BLOCK_DETAIL", "Download SO Block GT")
 
     # Chart distribusi SO Block per area (top 10)
     sec("DISTRIBUSI SO BLOCK PER NAMA AREA")
@@ -1297,42 +1187,34 @@ def page_rdi(filters=None):
 
     # SO Block
     sec("STATUS SO BLOCK RDI — REKOMENDASI TINDAKAN")
-    if "KELOMPOK" in dff.columns:
-        df_ov = dff[dff["KELOMPOK"]!="CURRENT"].copy()
-        df_ov["SO Status"] = df_ov["KELOMPOK"].map(SO_MAP)
-        wn = df_ov[df_ov["SO Status"]=="WARNING SO"]["Nominal"].sum()   if "Nominal" in df_ov.columns else 0
-        sn = df_ov[df_ov["SO Status"]=="SOFT BLOCK"]["Nominal"].sum()   if "Nominal" in df_ov.columns else 0
-        cn = df_ov[df_ov["SO Status"]=="CRITICAL BLOCK"]["Nominal"].sum() if "Nominal" in df_ov.columns else 0
-        wf = (df_ov["SO Status"]=="WARNING SO").sum()
-        sf = (df_ov["SO Status"]=="SOFT BLOCK").sum()
-        cf = (df_ov["SO Status"]=="CRITICAL BLOCK").sum()
-        wa = df_ov[df_ov["SO Status"]=="WARNING SO"]["Nama Area"].nunique()  if "Nama Area" in df_ov.columns else 0
-        sa = df_ov[df_ov["SO Status"]=="SOFT BLOCK"]["Nama Area"].nunique()  if "Nama Area" in df_ov.columns else 0
-        ca = df_ov[df_ov["SO Status"]=="CRITICAL BLOCK"]["Nama Area"].nunique() if "Nama Area" in df_ov.columns else 0
 
-        st.markdown(f"""
-        <div class="so-wrap">
-          <div class="so-card warn"><span class="so-tag warn"><span class="so-tag-dot"></span>Warning SO</span>
-            <p class="so-val">{M(wn)}</p><p class="so-sub">{wf:,} faktur · {wa} area</p>
-            <p class="so-desc">1–7 hari & 8–30 hari</p></div>
-          <div class="so-card soft"><span class="so-tag soft"><span class="so-tag-dot"></span>Soft Block</span>
-            <p class="so-val">{M(sn)}</p><p class="so-sub">{sf:,} faktur · {sa} area</p>
-            <p class="so-desc">31–60 & 61–90 hari</p></div>
-          <div class="so-card crit"><span class="so-tag crit"><span class="so-tag-dot"></span>Critical Block</span>
-            <p class="so-val">{M(cn)}</p><p class="so-sub">{cf:,} faktur · {ca} area</p>
-            <p class="so-desc">91+ hari & &lt;2026</p></div>
-        </div>
-        """, unsafe_allow_html=True)
+    df_ov = dff.copy()
+    df_ov["SO Kat"] = df_ov["KELOMPOK"].map({
+        "CURRENT":"WARNING SO","1-7 DAYS":"WARNING SO","8-30 DAYS":"WARNING SO",
+        "31-60 DAYS":"BLOCK SO","61-90 DAYS":"BLOCK SO",
+        "91-120 DAYS":"CRITICAL BLOCK SO","121+ DAYS":"CRITICAL BLOCK SO","<2026":"CRITICAL BLOCK SO",
+    })
 
-        rdi_so_cols = [c for c in ["SO Status","Nama Area","ASM","Nama Toko",
-                                    "No Faktur","KELOMPOK","Nominal","Nilai Faktur"] if c in df_ov.columns]
-        tbl_rdi_so = df_ov[rdi_so_cols].copy()
-        for c in ["Nominal","Nilai Faktur"]:
-            if c in tbl_rdi_so.columns: tbl_rdi_so[c]=tbl_rdi_so[c].apply(M)
-        tbl_rdi_so.rename(columns={"KELOMPOK":"Kelompok"},inplace=True)
-        tbl_rdi_so.insert(0,"#",range(1,len(tbl_rdi_so)+1))
-        st.dataframe(tbl_rdi_so, use_container_width=True, hide_index=True, height=380)
-        dl_btn(df_ov[rdi_so_cols], "RDI_SO_BLOCK_DETAIL","Download SO Block RDI")
+    grp_cols = [c for c in ["RBM","Nama Area","No Faktur SAP","Nama Toko"] if c in df_ov.columns]
+    tbl_so = df_ov.groupby(grp_cols).apply(lambda g: pd.Series({
+        "Qty Faktur":        len(g),
+        "Warning SO":        g.loc[g["SO Kat"]=="WARNING SO","Nominal"].sum(),
+        "Block SO":          g.loc[g["SO Kat"]=="BLOCK SO","Nominal"].sum(),
+        "Critical Block SO": g.loc[g["SO Kat"]=="CRITICAL BLOCK SO","Nominal"].sum(),
+        "Total Nilai Faktur":g["Nilai Faktur"].sum() if "Nilai Faktur" in g.columns else g["Nominal"].sum(),
+    }), include_groups=False).reset_index()
+
+    tbl_so = tbl_so[(tbl_so["Warning SO"]!=0)|(tbl_so["Block SO"]!=0)|(tbl_so["Critical Block SO"]!=0)]
+    tbl_so = tbl_so.sort_values("Critical Block SO", ascending=False).reset_index(drop=True)
+    tbl_so.insert(0,"Nomor", range(1, len(tbl_so)+1))
+    tbl_so.rename(columns={"No Faktur SAP":"Kode Customer"}, inplace=True)
+    for col in ["Warning SO","Block SO","Critical Block SO","Total Nilai Faktur"]:
+        if col in tbl_so.columns:
+            tbl_so[col] = tbl_so[col].apply(lambda x: f"{x:,.0f}" if x!=0 else "-")
+
+    st.dataframe(tbl_so, use_container_width=True, hide_index=True, height=440)
+    dl_btn(df_ov, "RDI_SO_BLOCK_DETAIL", "Download SO Block RDI")
+
 
     # Komposisi
     sec("KOMPOSISI OUTSTANDING RDI")
