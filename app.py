@@ -1641,9 +1641,18 @@ def main():
             unsafe_allow_html=True)
         # Tampilkan tab tanpa filter
         tab1, tab2, tab3 = st.tabs(["AR OTC — MTI NKA", "AR GT", "AR RDI"])
-        with tab1: page_otc({})
-        with tab2: page_gt({})
-        with tab3: page_rdi({})
+        with tab1:
+            if st.session_state.get("f_tab_sel") != "AR OTC — MTI NKA":
+                st.session_state["f_tab_sel"] = "AR OTC — MTI NKA"
+            page_otc({})
+        with tab2:
+            if st.session_state.get("f_tab_sel") != "AR GT":
+                st.session_state["f_tab_sel"] = "AR GT"
+            page_gt({})
+        with tab3:
+            if st.session_state.get("f_tab_sel") != "AR RDI":
+                st.session_state["f_tab_sel"] = "AR RDI"
+            page_rdi({})
         return
 
     # Load data referensi sesuai tab yang dipilih
@@ -1696,10 +1705,19 @@ def main():
     # Tab konten — ikut pilihan di sidebar
     tab1, tab2, tab3 = st.tabs(["AR OTC — MTI NKA", "AR GT", "AR RDI"])
     with tab1:
+        if tab_sel != "AR OTC — MTI NKA":
+            st.session_state["f_tab_sel"] = "AR OTC — MTI NKA"
+            st.rerun()
         page_otc(filters)
     with tab2:
+        if tab_sel != "AR GT":
+            st.session_state["f_tab_sel"] = "AR GT"
+            st.rerun()
         page_gt(filters)
     with tab3:
+        if tab_sel != "AR RDI":
+            st.session_state["f_tab_sel"] = "AR RDI"
+            st.rerun()
         page_rdi(filters)
 
 if __name__ == "__main__":
