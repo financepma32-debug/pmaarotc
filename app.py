@@ -1616,11 +1616,21 @@ def main():
         unsafe_allow_html=True)
 
     # Pilih sumber data untuk opsi filter
+    prev_tab = st.session_state.get("f_tab_prev", "AR OTC — MTI NKA")
     tab_sel = st.sidebar.selectbox(
         "Lihat Data",
         ["AR OTC — MTI NKA", "AR GT", "AR RDI"],
         key="f_tab_sel"
     )
+    # Reset semua filter saat tab berubah
+    if tab_sel != prev_tab:
+        for k in ["f_region","f_area","f_asm","f_rbm","f_sales",
+                  "f_jenis","f_toko","f_kat","f_grp","f_top","f_bkt","f_so"]:
+            if k in st.session_state:
+                del st.session_state[k]
+        st.session_state["f_tab_prev"] = tab_sel
+        st.rerun()
+    st.session_state["f_tab_prev"] = tab_sel
 
     # Load data referensi sesuai tab yang dipilih
     if tab_sel == "AR OTC — MTI NKA":
