@@ -652,14 +652,6 @@ def page_otc(filters=None):
     if so_kat!="Semua" and "KELOMPOK" in dff.columns:
         _tmp=dff[dff["KELOMPOK"]!="CURRENT"].copy(); _tmp["_SO"]=_tmp["KELOMPOK"].map(SO_MAP)
         dff=dff[dff["No Faktur"].isin(_tmp[_tmp["_SO"]==so_kat]["No Faktur"])]
-    dff = df.copy()
-    if sel_region: dff=dff[dff["REGION"]      .isin(sel_region)]
-    if sel_area  : dff=dff[dff["NAMA AREA"]   .isin(sel_area)]
-    if sel_jenis : dff=dff[dff["JENIS OUTLET"].isin(sel_jenis)]
-    if sel_asm   : dff=dff[dff["ASM"]         .isin(sel_asm)]
-    if sel_rbm   : dff=dff[dff["RBM"]         .isin(sel_rbm)]
-    if sel_grp   : dff=dff[dff["GROUPING OS"] .isin(sel_grp)]
-    if sel_bkt:    dff=dff[dff["KELOMPOK"].isin(sel_bkt)]
     if dff.empty:
         st.warning("Tidak ada data sesuai filter."); return
 
@@ -937,14 +929,6 @@ def page_gt(filters=None):
     if so_kat!="Semua" and "KELOMPOK" in dff.columns:
         _tmp=dff[dff["KELOMPOK"]!="CURRENT"].copy(); _tmp["_SO"]=_tmp["KELOMPOK"].map(SO_MAP)
         dff=dff[dff["No Faktur"].isin(_tmp[_tmp["_SO"]==so_kat]["No Faktur"])]
-    dff = df.copy()
-    if sel_region: dff=dff[dff["Region"]      .isin(sel_region)]
-    if sel_area  : dff=dff[dff["Nama Area"]   .isin(sel_area)]
-    if sel_jenis : dff=dff[dff["Jenis Outlet"].isin(sel_jenis)]
-    if sel_asm   : dff=dff[dff["ASM"]         .isin(sel_asm)]
-    if sel_rbm   : dff=dff[dff["RBM"]         .isin(sel_rbm)]
-    if sel_grp   : dff=dff[dff["Grouping OS"] .isin(sel_grp)]
-    if sel_bkt:    dff=dff[dff["KELOMPOK"].isin(sel_bkt)]
     if dff.empty:
         st.warning("Tidak ada data sesuai filter."); return
 
@@ -1289,13 +1273,6 @@ def page_rdi(filters=None):
     if so_kat!="Semua" and "KELOMPOK" in dff.columns:
         _tmp=dff[dff["KELOMPOK"]!="CURRENT"].copy(); _tmp["_SO"]=_tmp["KELOMPOK"].map(SO_MAP)
         dff=dff[dff["No Faktur"].isin(_tmp[_tmp["_SO"]==so_kat]["No Faktur"])]
-    dff = df.copy()
-    if sel_region and "Region"       in dff.columns: dff=dff[dff["Region"].isin(sel_region)]
-    if sel_area   and "Nama Area"    in dff.columns: dff=dff[dff["Nama Area"].isin(sel_area)]
-    if sel_jenis  and "Jenis Outlet" in dff.columns: dff=dff[dff["Jenis Outlet"].isin(sel_jenis)]
-    if sel_asm    and "ASM"          in dff.columns: dff=dff[dff["ASM"].isin(sel_asm)]
-    if sel_grp    and "Grouping OS"  in dff.columns: dff=dff[dff["Grouping OS"].isin(sel_grp)]
-    if sel_bkt and "KELOMPOK" in dff.columns: dff=dff[dff["KELOMPOK"].isin(sel_bkt)]
     if dff.empty:
         st.warning("Tidak ada data sesuai filter."); return
 
