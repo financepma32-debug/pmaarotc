@@ -673,30 +673,38 @@ def page_otc(filters=None):
 
     df_ov = dff.copy()
     df_ov["SO Kat"] = df_ov["KELOMPOK"].map({
-        "CURRENT":"WARNING SO","1-7 DAYS":"WARNING SO","8-30 DAYS":"WARNING SO",
-        "31-60 DAYS":"BLOCK SO","61-90 DAYS":"BLOCK SO",
-        "91-120 DAYS":"CRITICAL BLOCK SO","121+ DAYS":"CRITICAL BLOCK SO","<2026":"CRITICAL BLOCK SO",
-    })
+        "CURRENT":"Warning SO","1-7 DAYS":"Warning SO","8-30 DAYS":"Warning SO",
+        "31-60 DAYS":"Block SO","61-90 DAYS":"Block SO",
+        "91-120 DAYS":"Critical Block SO","121+ DAYS":"Critical Block SO","<2026":"Critical Block SO",
+    }).fillna("Warning SO")
 
+    # Pivot menggunakan pivot_table — kompatibel semua versi pandas
     grp_cols = [c for c in ["RBM","NAMA AREA","No Faktur SAP","NAMA TOKO"] if c in df_ov.columns]
-    tbl_so = df_ov.groupby(grp_cols).apply(lambda g: pd.Series({
-        "Qty Faktur":        len(g),
-        "Warning SO":        g.loc[g["SO Kat"]=="WARNING SO","NOMINAL"].sum(),
-        "Block SO":          g.loc[g["SO Kat"]=="BLOCK SO","NOMINAL"].sum(),
-        "Critical Block SO": g.loc[g["SO Kat"]=="CRITICAL BLOCK SO","NOMINAL"].sum(),
-        "Total Nilai Faktur":g["Nilai Faktur"].sum() if "Nilai Faktur" in g.columns else g["NOMINAL"].sum(),
-    }), include_groups=False).reset_index()
-
-    tbl_so = tbl_so[(tbl_so["Warning SO"]!=0)|(tbl_so["Block SO"]!=0)|(tbl_so["Critical Block SO"]!=0)]
-    tbl_so = tbl_so.sort_values("Critical Block SO", ascending=False).reset_index(drop=True)
-    tbl_so.insert(0,"Nomor", range(1, len(tbl_so)+1))
-    tbl_so.rename(columns={"NAMA AREA":"Nama Area","NAMA TOKO":"Nama Toko","No Faktur SAP":"Kode Customer"}, inplace=True)
-    for col in ["Warning SO","Block SO","Critical Block SO","Total Nilai Faktur"]:
-        if col in tbl_so.columns:
-            tbl_so[col] = tbl_so[col].apply(lambda x: f"{x:,.0f}" if x!=0 else "-")
-
-    st.dataframe(tbl_so, use_container_width=True, hide_index=True, height=440)
-    dl_btn(df_ov, "SO_BLOCK_DETAIL", "Download SO Block Detail")
+    if grp_cols:
+        # Qty faktur per toko
+        qty = df_ov.groupby(grp_cols)["No Faktur"].count().reset_index().rename(columns={"No Faktur":"Qty Faktur"})
+        # Pivot nominal per kategori SO
+        piv = df_ov.pivot_table(index=grp_cols, columns="SO Kat", values="NOMINAL", aggfunc="sum", fill_value=0).reset_index()
+        piv.columns.name = None
+        # Gabung
+        tbl_so = qty.merge(piv, on=grp_cols, how="left")
+        # Pastikan kolom ada
+        for col in ["Warning SO","Block SO","Critical Block SO"]:
+            if col not in tbl_so.columns: tbl_so[col] = 0
+        # Total nilai faktur
+        if "Nilai Faktur" in df_ov.columns:
+            tot = df_ov.groupby(grp_cols)["Nilai Faktur"].sum().reset_index().rename(columns={"Nilai Faktur":"Total Nilai Faktur"})
+            tbl_so = tbl_so.merge(tot, on=grp_cols, how="left")
+        # Filter hanya yang ada outstanding
+        tbl_so = tbl_so[(tbl_so.get("Warning SO",0)!=0)|(tbl_so.get("Block SO",0)!=0)|(tbl_so.get("Critical Block SO",0)!=0)]
+        tbl_so = tbl_so.sort_values("Critical Block SO", ascending=False).reset_index(drop=True)
+        tbl_so.insert(0,"Nomor", range(1, len(tbl_so)+1))
+        tbl_so.rename(columns={"NAMA AREA":"Nama Area","NAMA TOKO":"Nama Toko","No Faktur SAP":"Kode Customer"}, inplace=True)
+        for col in ["Warning SO","Block SO","Critical Block SO","Total Nilai Faktur"]:
+            if col in tbl_so.columns:
+                tbl_so[col] = tbl_so[col].apply(lambda x: f"{x:,.0f}" if x!=0 else "-")
+        st.dataframe(tbl_so, use_container_width=True, hide_index=True, height=440)
+        dl_btn(df_ov, "SO_BLOCK_DETAIL", "Download SO Block Detail")
 
 
     # Chart distribusi SO Block per area (top 10)
@@ -895,30 +903,31 @@ def page_gt(filters=None):
 
     df_ov = dff.copy()
     df_ov["SO Kat"] = df_ov["KELOMPOK"].map({
-        "CURRENT":"WARNING SO","1-7 DAYS":"WARNING SO","8-30 DAYS":"WARNING SO",
-        "31-60 DAYS":"BLOCK SO","61-90 DAYS":"BLOCK SO",
-        "91-120 DAYS":"CRITICAL BLOCK SO","121+ DAYS":"CRITICAL BLOCK SO","<2026":"CRITICAL BLOCK SO",
-    })
+        "CURRENT":"Warning SO","1-7 DAYS":"Warning SO","8-30 DAYS":"Warning SO",
+        "31-60 DAYS":"Block SO","61-90 DAYS":"Block SO",
+        "91-120 DAYS":"Critical Block SO","121+ DAYS":"Critical Block SO","<2026":"Critical Block SO",
+    }).fillna("Warning SO")
 
     grp_cols = [c for c in ["RBM","Nama Area","No Faktur SAP","Nama Toko"] if c in df_ov.columns]
-    tbl_so = df_ov.groupby(grp_cols).apply(lambda g: pd.Series({
-        "Qty Faktur":        len(g),
-        "Warning SO":        g.loc[g["SO Kat"]=="WARNING SO","Nominal"].sum(),
-        "Block SO":          g.loc[g["SO Kat"]=="BLOCK SO","Nominal"].sum(),
-        "Critical Block SO": g.loc[g["SO Kat"]=="CRITICAL BLOCK SO","Nominal"].sum(),
-        "Total Nilai Faktur":g["Nilai Faktur"].sum() if "Nilai Faktur" in g.columns else g["Nominal"].sum(),
-    }), include_groups=False).reset_index()
-
-    tbl_so = tbl_so[(tbl_so["Warning SO"]!=0)|(tbl_so["Block SO"]!=0)|(tbl_so["Critical Block SO"]!=0)]
-    tbl_so = tbl_so.sort_values("Critical Block SO", ascending=False).reset_index(drop=True)
-    tbl_so.insert(0,"Nomor", range(1, len(tbl_so)+1))
-    tbl_so.rename(columns={"No Faktur SAP":"Kode Customer"}, inplace=True)
-    for col in ["Warning SO","Block SO","Critical Block SO","Total Nilai Faktur"]:
-        if col in tbl_so.columns:
-            tbl_so[col] = tbl_so[col].apply(lambda x: f"{x:,.0f}" if x!=0 else "-")
-
-    st.dataframe(tbl_so, use_container_width=True, hide_index=True, height=440)
-    dl_btn(df_ov, "GT_SO_BLOCK_DETAIL", "Download SO Block GT")
+    if grp_cols:
+        qty = df_ov.groupby(grp_cols)["No Faktur"].count().reset_index().rename(columns={"No Faktur":"Qty Faktur"})
+        piv = df_ov.pivot_table(index=grp_cols, columns="SO Kat", values="Nominal", aggfunc="sum", fill_value=0).reset_index()
+        piv.columns.name = None
+        tbl_so = qty.merge(piv, on=grp_cols, how="left")
+        for col in ["Warning SO","Block SO","Critical Block SO"]:
+            if col not in tbl_so.columns: tbl_so[col] = 0
+        if "Nilai Faktur" in df_ov.columns:
+            tot = df_ov.groupby(grp_cols)["Nilai Faktur"].sum().reset_index().rename(columns={"Nilai Faktur":"Total Nilai Faktur"})
+            tbl_so = tbl_so.merge(tot, on=grp_cols, how="left")
+        tbl_so = tbl_so[(tbl_so.get("Warning SO",0)!=0)|(tbl_so.get("Block SO",0)!=0)|(tbl_so.get("Critical Block SO",0)!=0)]
+        tbl_so = tbl_so.sort_values("Critical Block SO", ascending=False).reset_index(drop=True)
+        tbl_so.insert(0,"Nomor", range(1, len(tbl_so)+1))
+        tbl_so.rename(columns={"No Faktur SAP":"Kode Customer"}, inplace=True)
+        for col in ["Warning SO","Block SO","Critical Block SO","Total Nilai Faktur"]:
+            if col in tbl_so.columns:
+                tbl_so[col] = tbl_so[col].apply(lambda x: f"{x:,.0f}" if x!=0 else "-")
+        st.dataframe(tbl_so, use_container_width=True, hide_index=True, height=440)
+        dl_btn(df_ov, "GT_SO_BLOCK_DETAIL", "Download SO Block GT")
 
 
     # Chart distribusi SO Block per area (top 10)
@@ -1190,30 +1199,31 @@ def page_rdi(filters=None):
 
     df_ov = dff.copy()
     df_ov["SO Kat"] = df_ov["KELOMPOK"].map({
-        "CURRENT":"WARNING SO","1-7 DAYS":"WARNING SO","8-30 DAYS":"WARNING SO",
-        "31-60 DAYS":"BLOCK SO","61-90 DAYS":"BLOCK SO",
-        "91-120 DAYS":"CRITICAL BLOCK SO","121+ DAYS":"CRITICAL BLOCK SO","<2026":"CRITICAL BLOCK SO",
-    })
+        "CURRENT":"Warning SO","1-7 DAYS":"Warning SO","8-30 DAYS":"Warning SO",
+        "31-60 DAYS":"Block SO","61-90 DAYS":"Block SO",
+        "91-120 DAYS":"Critical Block SO","121+ DAYS":"Critical Block SO","<2026":"Critical Block SO",
+    }).fillna("Warning SO")
 
     grp_cols = [c for c in ["RBM","Nama Area","No Faktur SAP","Nama Toko"] if c in df_ov.columns]
-    tbl_so = df_ov.groupby(grp_cols).apply(lambda g: pd.Series({
-        "Qty Faktur":        len(g),
-        "Warning SO":        g.loc[g["SO Kat"]=="WARNING SO","Nominal"].sum(),
-        "Block SO":          g.loc[g["SO Kat"]=="BLOCK SO","Nominal"].sum(),
-        "Critical Block SO": g.loc[g["SO Kat"]=="CRITICAL BLOCK SO","Nominal"].sum(),
-        "Total Nilai Faktur":g["Nilai Faktur"].sum() if "Nilai Faktur" in g.columns else g["Nominal"].sum(),
-    }), include_groups=False).reset_index()
-
-    tbl_so = tbl_so[(tbl_so["Warning SO"]!=0)|(tbl_so["Block SO"]!=0)|(tbl_so["Critical Block SO"]!=0)]
-    tbl_so = tbl_so.sort_values("Critical Block SO", ascending=False).reset_index(drop=True)
-    tbl_so.insert(0,"Nomor", range(1, len(tbl_so)+1))
-    tbl_so.rename(columns={"No Faktur SAP":"Kode Customer"}, inplace=True)
-    for col in ["Warning SO","Block SO","Critical Block SO","Total Nilai Faktur"]:
-        if col in tbl_so.columns:
-            tbl_so[col] = tbl_so[col].apply(lambda x: f"{x:,.0f}" if x!=0 else "-")
-
-    st.dataframe(tbl_so, use_container_width=True, hide_index=True, height=440)
-    dl_btn(df_ov, "RDI_SO_BLOCK_DETAIL", "Download SO Block RDI")
+    if grp_cols:
+        qty = df_ov.groupby(grp_cols)["No Faktur"].count().reset_index().rename(columns={"No Faktur":"Qty Faktur"})
+        piv = df_ov.pivot_table(index=grp_cols, columns="SO Kat", values="Nominal", aggfunc="sum", fill_value=0).reset_index()
+        piv.columns.name = None
+        tbl_so = qty.merge(piv, on=grp_cols, how="left")
+        for col in ["Warning SO","Block SO","Critical Block SO"]:
+            if col not in tbl_so.columns: tbl_so[col] = 0
+        if "Nilai Faktur" in df_ov.columns:
+            tot = df_ov.groupby(grp_cols)["Nilai Faktur"].sum().reset_index().rename(columns={"Nilai Faktur":"Total Nilai Faktur"})
+            tbl_so = tbl_so.merge(tot, on=grp_cols, how="left")
+        tbl_so = tbl_so[(tbl_so.get("Warning SO",0)!=0)|(tbl_so.get("Block SO",0)!=0)|(tbl_so.get("Critical Block SO",0)!=0)]
+        tbl_so = tbl_so.sort_values("Critical Block SO", ascending=False).reset_index(drop=True)
+        tbl_so.insert(0,"Nomor", range(1, len(tbl_so)+1))
+        tbl_so.rename(columns={"No Faktur SAP":"Kode Customer"}, inplace=True)
+        for col in ["Warning SO","Block SO","Critical Block SO","Total Nilai Faktur"]:
+            if col in tbl_so.columns:
+                tbl_so[col] = tbl_so[col].apply(lambda x: f"{x:,.0f}" if x!=0 else "-")
+        st.dataframe(tbl_so, use_container_width=True, hide_index=True, height=440)
+        dl_btn(df_ov, "RDI_SO_BLOCK_DETAIL", "Download SO Block RDI")
 
 
     # Komposisi
