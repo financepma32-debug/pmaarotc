@@ -438,6 +438,95 @@ def P(n,d): return f"{n/d*100:.1f}%" if d else "–"
 def get_sb():
     return create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
 
+@st.cache_data(ttl=15, show_spinner=False)
+def check_maintenance() -> bool:
+    try:
+        sb   = get_sb()
+        resp = sb.table("system_status").select("value").eq("key","maintenance").execute()
+        if resp.data:
+            return str(resp.data[0].get("value","0")).strip() == "1"
+    except Exception:
+        pass
+    return False
+
+
+def show_maintenance_page():
+    st.markdown("""
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+    html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
+    [data-testid="stAppViewContainer"] { background: #FFFFFF; }
+    [data-testid="stSidebar"] { display: none; }
+    .maint-wrap {
+        max-width: 480px;
+        margin: 80px auto 0;
+        text-align: center;
+        padding: 0 24px;
+    }
+    .maint-title {
+        font-size: 20px; font-weight: 700; color: #111827;
+        margin: 24px 0 10px;
+    }
+    .maint-msg {
+        font-size: 13.5px; color: #6B7280;
+        line-height: 1.75; margin: 0 0 24px;
+    }
+    .maint-badge {
+        display: inline-flex; align-items: center; gap: 8px;
+        background: #FEF2F2; border: 1px solid #FECACA;
+        border-radius: 999px; padding: 6px 18px;
+        font-size: 12px; font-weight: 600; color: #B01C2E;
+    }
+    .maint-dot {
+        width: 8px; height: 8px; background: #B01C2E;
+        border-radius: 50%;
+        animation: blink 1.4s ease-in-out infinite;
+    }
+    @keyframes blink {
+        0%,100%{ opacity:1; transform:scale(1); }
+        50%    { opacity:.3; transform:scale(.65); }
+    }
+    .maint-footer {
+        margin-top: 32px; font-size: 11px; color: #D1D5DB;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    ICON = """<svg width="76" height="76" viewBox="0 0 76 76" fill="none"
+         xmlns="http://www.w3.org/2000/svg">
+  <circle cx="38" cy="38" r="34" fill="#FEF2F2" stroke="#FECACA" stroke-width="1.5"/>
+  <ellipse cx="38" cy="27" rx="13" ry="4.5" fill="#FECACA" stroke="#B01C2E" stroke-width="1.8"/>
+  <line x1="25" y1="27" x2="25" y2="44" stroke="#B01C2E" stroke-width="1.8"/>
+  <line x1="51" y1="27" x2="51" y2="44" stroke="#B01C2E" stroke-width="1.8"/>
+  <ellipse cx="38" cy="44" rx="13" ry="4.5" fill="#FEF2F2" stroke="#B01C2E" stroke-width="1.8"/>
+  <path d="M38 50 C38 58 50 58 50 52" stroke="#B01C2E" stroke-width="2"
+        fill="none" stroke-linecap="round"/>
+  <polyline points="48,49 50,52 53,50" stroke="#B01C2E" stroke-width="2"
+        fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M38 50 C38 58 26 58 26 52" stroke="#B01C2E" stroke-width="2"
+        fill="none" stroke-linecap="round" opacity=".35"/>
+</svg>"""
+
+    st.markdown(f"""
+    <div class="maint-wrap">
+      {ICON}
+      <p class="maint-title">Sistem Sedang Diperbarui</p>
+      <p class="maint-msg">
+        Mohon tunggu sebentar.<br>
+        Sistem sedang melakukan <strong>sinkronisasi data terbaru</strong>.<br>
+        Silakan refresh halaman ini secara berkala.<br><br>
+        Terima kasih atas kesabaran Anda.
+      </p>
+      <div class="maint-badge">
+        <span class="maint-dot"></span>
+        Proses update sedang berjalan
+      </div>
+      <p class="maint-footer">AR Dashboard &nbsp;·&nbsp; PT Pinus Merah Abadi &nbsp;·&nbsp; FAD Team</p>
+    </div>
+    <script>setTimeout(()=>location.reload(), 30000);</script>
+    """, unsafe_allow_html=True)
+
+
 @st.cache_data(ttl=300, show_spinner=False)
 def load_otc():
     sb = get_sb()
@@ -1907,6 +1996,10 @@ def render_change_password():
 
 
 def main():
+    if check_maintenance():
+        show_maintenance_page()
+        return
+
     if not check_login():
         return
 
