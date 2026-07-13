@@ -1,0 +1,6 @@
+streamlit
+pandas
+plotly
+supabase
+openpyxl
+pillow>=11.0.0
