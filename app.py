@@ -908,7 +908,11 @@ def page_gt(filters=None):
         "91-120 DAYS":"Critical Block SO","121+ DAYS":"Critical Block SO","<2026":"Critical Block SO",
     }).fillna("Warning SO")
 
-    grp_cols = [c for c in ["RBM","Nama Area","Nama Toko"] if c in df_ov.columns]
+    # RBM mungkin kosong di RDI — filter hanya kolom yang punya nilai
+    _base_cols = ["RBM","Nama Area","Nama Toko"]
+    grp_cols = [c for c in _base_cols if c in df_ov.columns and df_ov[c].notna().any()]
+    if not grp_cols:
+        grp_cols = [c for c in ["Nama Area","Nama Toko"] if c in df_ov.columns]
     if grp_cols:
         qty = df_ov.groupby(grp_cols)["No Faktur"].count().reset_index().rename(columns={"No Faktur":"Qty Faktur"})
         piv = df_ov.pivot_table(index=grp_cols, columns="SO Kat", values="Nominal", aggfunc="sum", fill_value=0).reset_index()
@@ -1204,7 +1208,11 @@ def page_rdi(filters=None):
         "91-120 DAYS":"Critical Block SO","121+ DAYS":"Critical Block SO","<2026":"Critical Block SO",
     }).fillna("Warning SO")
 
-    grp_cols = [c for c in ["RBM","Nama Area","Nama Toko"] if c in df_ov.columns]
+    # RBM mungkin kosong di RDI — filter hanya kolom yang punya nilai
+    _base_cols = ["RBM","Nama Area","Nama Toko"]
+    grp_cols = [c for c in _base_cols if c in df_ov.columns and df_ov[c].notna().any()]
+    if not grp_cols:
+        grp_cols = [c for c in ["Nama Area","Nama Toko"] if c in df_ov.columns]
     if grp_cols:
         qty = df_ov.groupby(grp_cols)["No Faktur"].count().reset_index().rename(columns={"No Faktur":"Qty Faktur"})
         piv = df_ov.pivot_table(index=grp_cols, columns="SO Kat", values="Nominal", aggfunc="sum", fill_value=0).reset_index()
