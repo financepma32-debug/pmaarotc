@@ -8,7 +8,9 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 from supabase import create_client
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
+
+WIB = timezone(timedelta(hours=7))  # Asia/Jakarta, UTC+7 (tanpa DST)
 
 st.set_page_config(
     page_title="AR Dashboard — PMA FAD",
@@ -449,7 +451,8 @@ def load_otc():
             raw = meta.data[0].get("uploaded_at","")
             try:
                 dt = datetime.fromisoformat(raw.replace("Z","+00:00"))
-                last_updated = dt.strftime("%d %b %Y · %H:%M WIB")
+                dt_wib = dt.astimezone(WIB)
+                last_updated = dt_wib.strftime("%d %b %Y · %H:%M WIB")
             except Exception:
                 last_updated = raw
     except Exception:
@@ -492,7 +495,8 @@ def load_gt():
             raw = meta.data[0].get("uploaded_at","")
             try:
                 dt = datetime.fromisoformat(raw.replace("Z","+00:00"))
-                last_updated = dt.strftime("%d %b %Y · %H:%M WIB")
+                dt_wib = dt.astimezone(WIB)
+                last_updated = dt_wib.strftime("%d %b %Y · %H:%M WIB")
             except Exception:
                 last_updated = raw
     except Exception:
@@ -617,31 +621,42 @@ def pma_header(title, last_updated, n_faktur):
 # ════════════════════════════════════════════════════════════════════
 # PAGE: AR OTC
 # ════════════════════════════════════════════════════════════════════
-def page_otc(filters):
+def page_otc():
     with st.spinner("Memuat data OTC..."):
         df, last_updated = load_otc()
 
     if df.empty:
-        st.warning("Belum ada data OTC. Jalankan **JALANKAN_SEMUA.bat** untuk upload data.")
+        st.warning("Belum ada data OTC. Jalankan **JALANKAN_UPLOAD.bat** untuk upload data.")
         return
 
+    # ── SIDEBAR ───────────────────────────────────────────────────
+    st.sidebar.markdown("### Filter OTC")
+    def sb(label, col, src):
+        opts = sorted(src[col].dropna().unique().tolist())
+        return st.sidebar.multiselect(label, opts, default=[], key=f"otc_{col}")
+
+    sel_region = sb("Region",       "REGION",       df)
+    d0 = df if not sel_region else df[df["REGION"].isin(sel_region)]
+    sel_area   = sb("Nama Area",    "NAMA AREA",    d0)
+    d1 = d0 if not sel_area else d0[d0["NAMA AREA"].isin(sel_area)]
+    sel_jenis  = sb("Jenis Outlet", "JENIS OUTLET", d1)
+    sel_asm    = sb("ASM",          "ASM",          d1)
+    sel_rbm    = sb("RBM",          "RBM",          d1)
+    sel_grp    = sb("Grouping OS",  "GROUPING OS",  d1)
+    sel_bkt    = st.sidebar.multiselect("Kelompok Aging", BUCKETS, default=BUCKETS, key="otc_bkt")
+    st.sidebar.markdown("---")
+    if st.sidebar.button("↺ Refresh OTC", use_container_width=True, key="ref_otc"):
+        st.cache_data.clear(); st.rerun()
+    st.sidebar.caption(f"Terakhir diperbarui: {last_updated}")
+
     dff = df.copy()
-    if filters["region"]!="Semua" and "REGION"          in dff.columns: dff=dff[dff["REGION"]          ==filters["region"]]
-    if filters["area"]  !="Semua" and "NAMA AREA"        in dff.columns: dff=dff[dff["NAMA AREA"]        ==filters["area"]]
-    if filters["asm"]   !="Semua" and "ASM"              in dff.columns: dff=dff[dff["ASM"]              ==filters["asm"]]
-    if filters["rbm"]   !="Semua" and "RBM"              in dff.columns: dff=dff[dff["RBM"]              ==filters["rbm"]]
-    if filters["sales"] !="Semua" and "NAMA SALES"       in dff.columns: dff=dff[dff["NAMA SALES"]       ==filters["sales"]]
-    if filters["jenis"] !="Semua" and "JENIS OUTLET"     in dff.columns: dff=dff[dff["JENIS OUTLET"]     ==filters["jenis"]]
-    if filters["toko"]  !="Semua" and "NAMA TOKO"        in dff.columns: dff=dff[dff["NAMA TOKO"]        ==filters["toko"]]
-    if filters["kat"]   !="Semua" and "KATEGORI OVERDUE" in dff.columns: dff=dff[dff["KATEGORI OVERDUE"] ==filters["kat"]]
-    if filters["grp"]   !="Semua" and "GROUPING OS"      in dff.columns: dff=dff[dff["GROUPING OS"]      ==filters["grp"]]
-    if filters["top"]   !="Semua" and "TOP"              in dff.columns: dff=dff[dff["TOP"]              ==filters["top"]]
-    if filters["bkt"]:              dff=dff[dff["KELOMPOK"].isin(filters["bkt"])]
-    if filters["so_kat"]!="Semua" and "KELOMPOK" in dff.columns:
-        df_so_tmp = dff[dff["KELOMPOK"]!="CURRENT"].copy()
-        df_so_tmp["_SO"] = df_so_tmp["KELOMPOK"].map(SO_MAP)
-        valid_nf = df_so_tmp[df_so_tmp["_SO"]==filters["so_kat"]]["No Faktur"]
-        dff = dff[dff["No Faktur"].isin(valid_nf)]
+    if sel_region: dff=dff[dff["REGION"]      .isin(sel_region)]
+    if sel_area  : dff=dff[dff["NAMA AREA"]   .isin(sel_area)]
+    if sel_jenis : dff=dff[dff["JENIS OUTLET"].isin(sel_jenis)]
+    if sel_asm   : dff=dff[dff["ASM"]         .isin(sel_asm)]
+    if sel_rbm   : dff=dff[dff["RBM"]         .isin(sel_rbm)]
+    if sel_grp   : dff=dff[dff["GROUPING OS"] .isin(sel_grp)]
+    if sel_bkt:    dff=dff[dff["KELOMPOK"].isin(sel_bkt)]
     if dff.empty:
         st.warning("Tidak ada data sesuai filter."); return
 
@@ -892,7 +907,7 @@ def page_otc(filters):
 # ════════════════════════════════════════════════════════════════════
 # PAGE: AR GT
 # ════════════════════════════════════════════════════════════════════
-def page_gt(filters):
+def page_gt():
     with st.spinner("Memuat data GT..."):
         df, last_updated = load_gt()
 
@@ -900,23 +915,34 @@ def page_gt(filters):
         st.warning("Belum ada data OTC. Jalankan **JALANKAN_SEMUA.bat** untuk upload data GT.")
         return
 
+    # ── SIDEBAR ───────────────────────────────────────────────────
+    st.sidebar.markdown("### Filter OTC")
+    def sb(label, col, src):
+        opts = sorted(src[col].dropna().unique().tolist())
+        return st.sidebar.multiselect(label, opts, default=[], key=f"gt_{col}")
+
+    sel_region = sb("Region",       "Region",       df)
+    d0 = df if not sel_region else df[df["Region"].isin(sel_region)]
+    sel_area   = sb("Nama Area",    "Nama Area",    d0)
+    d1 = d0 if not sel_area else d0[d0["Nama Area"].isin(sel_area)]
+    sel_jenis  = sb("Jenis Outlet", "Jenis Outlet", d1)
+    sel_asm    = sb("ASM",          "ASM",          d1)
+    sel_rbm    = sb("RBM",          "RBM",          d1)
+    sel_grp    = sb("Grouping OS",  "Grouping OS",  d1)
+    sel_bkt    = st.sidebar.multiselect("Kelompok Aging", BUCKETS, default=BUCKETS, key="gt_bkt")
+    st.sidebar.markdown("---")
+    if st.sidebar.button("↺ Refresh GT", use_container_width=True, key="ref_gt"):
+        st.cache_data.clear(); st.rerun()
+    st.sidebar.caption(f"Update GT: {last_updated}")
+
     dff = df.copy()
-    if filters["region"]!="Semua" and "Region"          in dff.columns: dff=dff[dff["Region"]         ==filters["region"]]
-    if filters["area"]  !="Semua" and "Nama Area"        in dff.columns: dff=dff[dff["Nama Area"]       ==filters["area"]]
-    if filters["asm"]   !="Semua" and "ASM"              in dff.columns: dff=dff[dff["ASM"]             ==filters["asm"]]
-    if filters["rbm"]   !="Semua" and "RBM"              in dff.columns: dff=dff[dff["RBM"]             ==filters["rbm"]]
-    if filters["sales"] !="Semua" and "Nama Sales"       in dff.columns: dff=dff[dff["Nama Sales"]      ==filters["sales"]]
-    if filters["jenis"] !="Semua" and "Jenis Outlet"     in dff.columns: dff=dff[dff["Jenis Outlet"]    ==filters["jenis"]]
-    if filters["toko"]  !="Semua" and "Nama Toko"        in dff.columns: dff=dff[dff["Nama Toko"]       ==filters["toko"]]
-    if filters["kat"]   !="Semua" and "Kategori Overdue" in dff.columns: dff=dff[dff["Kategori Overdue"]==filters["kat"]]
-    if filters["grp"]   !="Semua" and "Grouping OS"      in dff.columns: dff=dff[dff["Grouping OS"]     ==filters["grp"]]
-    if filters["top"]   !="Semua" and "TOP"              in dff.columns: dff=dff[dff["TOP"]             ==filters["top"]]
-    if filters["bkt"] and "KELOMPOK" in dff.columns: dff=dff[dff["KELOMPOK"].isin(filters["bkt"])]
-    if filters["so_kat"]!="Semua" and "KELOMPOK" in dff.columns:
-        df_so_tmp = dff[dff["KELOMPOK"]!="CURRENT"].copy()
-        df_so_tmp["_SO"] = df_so_tmp["KELOMPOK"].map(SO_MAP)
-        valid_nf = df_so_tmp[df_so_tmp["_SO"]==filters["so_kat"]]["No Faktur"]
-        dff = dff[dff["No Faktur"].isin(valid_nf)]
+    if sel_region: dff=dff[dff["Region"]      .isin(sel_region)]
+    if sel_area  : dff=dff[dff["Nama Area"]   .isin(sel_area)]
+    if sel_jenis : dff=dff[dff["Jenis Outlet"].isin(sel_jenis)]
+    if sel_asm   : dff=dff[dff["ASM"]         .isin(sel_asm)]
+    if sel_rbm   : dff=dff[dff["RBM"]         .isin(sel_rbm)]
+    if sel_grp   : dff=dff[dff["Grouping OS"] .isin(sel_grp)]
+    if sel_bkt:    dff=dff[dff["KELOMPOK"].isin(sel_bkt)]
     if dff.empty:
         st.warning("Tidak ada data sesuai filter."); return
 
@@ -1177,7 +1203,8 @@ def load_rdi():
             raw = meta.data[0].get("uploaded_at","")
             try:
                 dt = datetime.fromisoformat(raw.replace("Z","+00:00"))
-                last_updated = dt.strftime("%d %b %Y · %H:%M WIB")
+                dt_wib = dt.astimezone(WIB)
+                last_updated = dt_wib.strftime("%d %b %Y · %H:%M WIB")
             except Exception:
                 last_updated = raw
     except Exception:
@@ -1233,7 +1260,7 @@ def load_rdi():
 # ════════════════════════════════════════════════════════════════════════════
 # PAGE: AR RDI
 # ════════════════════════════════════════════════════════════════════════════
-def page_rdi(filters):
+def page_rdi():
     with st.spinner("Memuat data RDI..."):
         df, last_updated = load_rdi()
 
@@ -1241,23 +1268,34 @@ def page_rdi(filters):
         st.info("Belum ada data RDI. Jalankan **JALANKAN_SEMUA.bat** untuk upload data RDI.")
         return
 
+    # Sidebar
+    st.sidebar.markdown("### Filter RDI")
+    def sbr(label, col, src):
+        if col not in src.columns: return []
+        opts = sorted(src[col].dropna().unique().tolist())
+        return st.sidebar.multiselect(label, opts, default=[], key=f"rdi_{col}")
+
+    sel_region = sbr("Region",       "Region",       df)
+    d0 = df if not sel_region else df[df["Region"].isin(sel_region)]
+    sel_area   = sbr("Nama Area",    "Nama Area",    d0)
+    d1 = d0 if not sel_area else d0[d0["Nama Area"].isin(sel_area)]
+    sel_jenis  = sbr("Jenis Outlet", "Jenis Outlet", d1)
+    sel_asm    = sbr("ASM",          "ASM",          d1)
+    sel_grp    = sbr("Grouping OS",  "Grouping OS",  d1)
+    sel_bkt    = st.sidebar.multiselect("Kelompok Aging", BUCKETS, default=BUCKETS, key="rdi_bkt")
+    st.sidebar.markdown("---")
+    if st.sidebar.button("Refresh RDI", use_container_width=True, key="ref_rdi"):
+        st.cache_data.clear(); st.rerun()
+    st.sidebar.caption(f"Terakhir diperbarui: {last_updated}")
+
+    # Filter
     dff = df.copy()
-    if filters["region"]!="Semua" and "Region"          in dff.columns: dff=dff[dff["Region"]         ==filters["region"]]
-    if filters["area"]  !="Semua" and "Nama Area"        in dff.columns: dff=dff[dff["Nama Area"]       ==filters["area"]]
-    if filters["asm"]   !="Semua" and "ASM"              in dff.columns: dff=dff[dff["ASM"]             ==filters["asm"]]
-    if filters["rbm"]   !="Semua" and "RBM"              in dff.columns: dff=dff[dff["RBM"]             ==filters["rbm"]]
-    if filters["sales"] !="Semua" and "Nama Sales"       in dff.columns: dff=dff[dff["Nama Sales"]      ==filters["sales"]]
-    if filters["jenis"] !="Semua" and "Jenis Outlet"     in dff.columns: dff=dff[dff["Jenis Outlet"]    ==filters["jenis"]]
-    if filters["toko"]  !="Semua" and "Nama Toko"        in dff.columns: dff=dff[dff["Nama Toko"]       ==filters["toko"]]
-    if filters["kat"]   !="Semua" and "Kategori Overdue" in dff.columns: dff=dff[dff["Kategori Overdue"]==filters["kat"]]
-    if filters["grp"]   !="Semua" and "Grouping OS"      in dff.columns: dff=dff[dff["Grouping OS"]     ==filters["grp"]]
-    if filters["top"]   !="Semua" and "TOP"              in dff.columns: dff=dff[dff["TOP"]             ==filters["top"]]
-    if filters["bkt"] and "KELOMPOK" in dff.columns: dff=dff[dff["KELOMPOK"].isin(filters["bkt"])]
-    if filters["so_kat"]!="Semua" and "KELOMPOK" in dff.columns:
-        df_so_tmp = dff[dff["KELOMPOK"]!="CURRENT"].copy()
-        df_so_tmp["_SO"] = df_so_tmp["KELOMPOK"].map(SO_MAP)
-        valid_nf = df_so_tmp[df_so_tmp["_SO"]==filters["so_kat"]]["No Faktur"]
-        dff = dff[dff["No Faktur"].isin(valid_nf)]
+    if sel_region and "Region"       in dff.columns: dff=dff[dff["Region"].isin(sel_region)]
+    if sel_area   and "Nama Area"    in dff.columns: dff=dff[dff["Nama Area"].isin(sel_area)]
+    if sel_jenis  and "Jenis Outlet" in dff.columns: dff=dff[dff["Jenis Outlet"].isin(sel_jenis)]
+    if sel_asm    and "ASM"          in dff.columns: dff=dff[dff["ASM"].isin(sel_asm)]
+    if sel_grp    and "Grouping OS"  in dff.columns: dff=dff[dff["Grouping OS"].isin(sel_grp)]
+    if sel_bkt and "KELOMPOK" in dff.columns: dff=dff[dff["KELOMPOK"].isin(sel_bkt)]
     if dff.empty:
         st.warning("Tidak ada data sesuai filter."); return
 
@@ -1410,323 +1448,6 @@ def preload_all():
         t.join()
 
 
-
-# ════════════════════════════════════════════════════════════════════════════
-# PAGE: EMAIL REMINDER
-# ════════════════════════════════════════════════════════════════════════════
-@st.cache_data(ttl=60, show_spinner=False)
-def load_email_log():
-    try:
-        sb   = get_sb()
-        resp = sb.table("email_log").select("*").order("sent_at",desc=True).limit(50).execute()
-        return pd.DataFrame(resp.data or [])
-    except Exception:
-        return pd.DataFrame()
-
-@st.cache_data(ttl=300, show_spinner=False)
-def load_pic_email():
-    try:
-        sb   = get_sb()
-        resp = sb.table("pic_email").select("*").order("area").execute()
-        return pd.DataFrame(resp.data or [])
-    except Exception:
-        return pd.DataFrame()
-
-@st.cache_data(ttl=3600, show_spinner=False)
-def load_email_config():
-    try:
-        sb   = get_sb()
-        resp = sb.table("email_config").select("key,value").execute()
-        return {r["key"]: r["value"] for r in (resp.data or [])}
-    except Exception:
-        return {}
-
-
-def page_email():
-    st.markdown(f"""
-    <div class="pma-sticky">
-      <div class="pma-header">
-        <div class="pma-hl">
-          <p class="pma-title">Email Reminder — Outstanding AR</p>
-          <p class="pma-sub">PT Pinus Merah Abadi &nbsp;·&nbsp; FAD Team</p>
-        </div>
-        <span class="pma-date">{datetime.now().strftime('%d %b %Y')}</span>
-      </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    df_pic    = load_pic_email()
-    df_log    = load_email_log()
-    cfg       = load_email_config()
-
-    # ── Tab internal ──────────────────────────────────────────────
-    t1, t2, t3 = st.tabs(["Kirim Email", "Master PIC", "Log & Konfigurasi"])
-
-    # ──────────────────────────────────────────────────────────────
-    with t1:
-        sec("KIRIM EMAIL REMINDER")
-        st.markdown(
-            "<p style='font-size:13px;color:#6B7280;margin-bottom:16px'>"
-            "Email akan dikirim ke ASM, RBM, dan CC atasan berisi ringkasan "
-            "outstanding overdue per area beserta attachment CSV.</p>",
-            unsafe_allow_html=True
-        )
-
-        col_a, col_b = st.columns([2,1])
-        with col_a:
-            if not df_pic.empty:
-                area_opts = ["Semua Area"] + sorted(df_pic["area"].dropna().tolist())
-            else:
-                area_opts = ["Semua Area"]
-
-            sel_area_email = st.selectbox("Pilih Area", area_opts, key="email_area")
-            catatan = st.text_area(
-                "Catatan tambahan (opsional)",
-                placeholder="Contoh: Mohon segera diselesaikan sebelum akhir bulan",
-                height=80, key="email_note"
-            )
-
-        with col_b:
-            st.markdown("<br>", unsafe_allow_html=True)
-            # Info config
-            smtp_ok = bool(cfg.get("smtp_host") and cfg.get("sender_email") and cfg.get("smtp_password"))
-            if smtp_ok:
-                st.success("SMTP terkonfigurasi")
-            else:
-                st.error("SMTP belum dikonfigurasi — isi di tab Konfigurasi")
-
-            jadwal_info = f"Jadwal otomatis: Setiap Senin pukul {cfg.get('schedule_hour','8')}:00"
-            st.info(jadwal_info)
-
-        if st.button("Kirim Email Sekarang", type="primary",
-                     use_container_width=False, key="btn_send_email"):
-            if not smtp_ok:
-                st.error("Konfigurasi SMTP belum lengkap. Isi dulu di tab Konfigurasi.")
-            else:
-                import smtplib, io, csv
-                from email.mime.multipart import MIMEMultipart
-                from email.mime.text      import MIMEText
-                from email.mime.base      import MIMEBase
-                from email                import encoders
-
-                sb = get_sb()
-
-                def fmt(v):
-                    try:
-                        v = float(v)
-                        if abs(v)>=1e9: return f"Rp {v/1e9:.2f}M"
-                        if abs(v)>=1e6: return f"Rp {v/1e6:.1f}Jt"
-                        return f"Rp {v:,.0f}"
-                    except: return str(v)
-
-                # Tentukan area yang dikirim
-                if sel_area_email == "Semua Area":
-                    areas_to_send = df_pic["area"].dropna().tolist() if not df_pic.empty else []
-                else:
-                    areas_to_send = [sel_area_email]
-
-                progress = st.progress(0, text="Memulai pengiriman...")
-                total_area = len(areas_to_send)
-                success_ct = 0
-
-                for i, area in enumerate(areas_to_send):
-                    progress.progress((i+1)/total_area, text=f"Mengirim ke {area}...")
-
-                    # Cari PIC
-                    pic_row = df_pic[df_pic["area"]==area]
-                    if pic_row.empty: continue
-                    p        = pic_row.iloc[0]
-                    asm      = p.get("asm","")
-                    email_asm= p.get("email_asm","")
-                    rbm      = p.get("rbm","")
-                    email_rbm= p.get("email_rbm","")
-
-                    to_list = [e for e in [email_asm, email_rbm] if e]
-                    cc_list = [e.strip() for e in cfg.get("cc_atasan","").split(",") if e.strip()]
-                    if not to_list: continue
-
-                    # Ambil data outstanding overdue area ini
-                    rows_os = []
-                    page_n, SZ = 0, 1000
-                    while True:
-                        r = (sb.table("os_master")
-                               .select("NAMA AREA,NAMA TOKO,No Faktur,Tanggal JT,NOMINAL,KELOMPOK,OVERDUE?,GROUPING OS")
-                               .eq("NAMA AREA", area)
-                               .neq("KELOMPOK","CURRENT")
-                               .range(page_n*SZ,(page_n+1)*SZ-1)
-                               .execute())
-                        if not r.data: break
-                        rows_os.extend(r.data)
-                        if len(r.data)<SZ: break
-                        page_n+=1
-
-                    if not rows_os: continue
-                    total_nom = sum(float(r.get("NOMINAL") or 0) for r in rows_os)
-
-                    today_str  = datetime.now().strftime("%d %b %Y")
-                    subject    = f"[AR Reminder] Outstanding {area} — {today_str} | {fmt(total_nom)}"
-                    if catatan:
-                        subject += f" | {catatan[:40]}"
-
-                    # Build HTML email sederhana
-                    top10 = sorted(rows_os, key=lambda x: float(x.get("NOMINAL") or 0), reverse=True)[:10]
-                    tabel_rows = "".join([
-                        f"<tr><td style='padding:6px 10px;border-bottom:1px solid #eee'>{r.get('NAMA TOKO','')}</td>"
-                        f"<td style='padding:6px 10px;border-bottom:1px solid #eee'>{r.get('No Faktur','')}</td>"
-                        f"<td style='padding:6px 10px;border-bottom:1px solid #eee;text-align:right;color:#B01C2E;font-weight:600'>{fmt(r.get('NOMINAL',0))}</td>"
-                        f"<td style='padding:6px 10px;border-bottom:1px solid #eee;text-align:center'>{r.get('KELOMPOK','')}</td></tr>"
-                        for r in top10
-                    ])
-                    catatan_html = f"<p style='color:#374151;font-size:13px'><b>Catatan:</b> {catatan}</p>" if catatan else ""
-
-                    html = f"""<html><body style='font-family:Arial,sans-serif'>
-                    <div style='max-width:600px;margin:0 auto'>
-                    <div style='background:#B01C2E;padding:20px;border-radius:8px 8px 0 0'>
-                      <h2 style='color:#fff;margin:0'>Reminder Outstanding AR — {area}</h2>
-                      <p style='color:rgba(255,255,255,.7);margin:4px 0 0;font-size:12px'>PT Pinus Merah Abadi · {today_str}</p>
-                    </div>
-                    <div style='background:#fff;padding:24px;border:1px solid #eee'>
-                      <p>Yth. Bapak/Ibu <b>{asm}</b>,</p>
-                      <p>Total outstanding overdue area <b>{area}</b> per {today_str}:</p>
-                      <h2 style='color:#B01C2E'>{fmt(total_nom)}</h2>
-                      <p style='color:#6B7280'>{len(rows_os):,} faktur overdue</p>
-                      {catatan_html}
-                      <p><b>Top 10 Faktur Terbesar:</b></p>
-                      <table width='100%' style='border-collapse:collapse;font-size:12px'>
-                        <tr style='background:#F9FAFB'>
-                          <th style='padding:8px 10px;text-align:left'>Nama Toko</th>
-                          <th style='padding:8px 10px;text-align:left'>No Faktur</th>
-                          <th style='padding:8px 10px;text-align:right'>Nominal</th>
-                          <th style='padding:8px 10px;text-align:center'>Kelompok</th>
-                        </tr>
-                        {tabel_rows}
-                      </table>
-                      <p style='color:#9CA3AF;font-size:11px;margin-top:16px'>
-                        Detail lengkap terlampir dalam CSV. Dashboard: 
-                        <a href='https://pmaarotc-be99rj2ywac9ptjsfypgqqp.streamlit.app' style='color:#B01C2E'>AR Dashboard PMA</a>
-                      </p>
-                    </div></div></body></html>"""
-
-                    # Build CSV
-                    csv_io = io.StringIO()
-                    w = csv.DictWriter(csv_io,
-                                       fieldnames=["NAMA AREA","NAMA TOKO","No Faktur","Tanggal JT","NOMINAL","KELOMPOK","OVERDUE?","GROUPING OS"],
-                                       extrasaction="ignore", delimiter=";")
-                    w.writeheader(); w.writerows(rows_os)
-                    csv_bytes = csv_io.getvalue().encode("utf-8-sig")
-
-                    # Kirim
-                    try:
-                        msg = MIMEMultipart("mixed")
-                        msg["From"]    = f"{cfg.get('sender_name','AR Dashboard')} <{cfg['sender_email']}>"
-                        msg["To"]      = ", ".join(to_list)
-                        if cc_list: msg["Cc"] = ", ".join(cc_list)
-                        msg["Subject"] = subject
-                        msg.attach(MIMEText(html,"html","utf-8"))
-                        att = MIMEBase("application","octet-stream")
-                        att.set_payload(csv_bytes)
-                        encoders.encode_base64(att)
-                        att.add_header("Content-Disposition", "attachment; filename=OS_" + area.replace(' ','_') + "_" + datetime.now().strftime('%Y%m%d') + ".csv")
-                        msg.attach(att)
-
-                        port = int(cfg.get("smtp_port",587))
-                        with smtplib.SMTP(cfg["smtp_host"], port, timeout=30) as srv:
-                            srv.ehlo(); srv.starttls()
-                            srv.login(cfg["smtp_user"],cfg["smtp_password"])
-                            srv.sendmail(cfg["sender_email"],
-                                         to_list+cc_list, msg.as_string())
-                        success_ct += 1
-                        sb.table("email_log").insert({
-                            "recipient":    f"{asm} / {rbm}",
-                            "email_to":     ", ".join(to_list),
-                            "subject":      subject,
-                            "area":         area,
-                            "status":       "sent",
-                            "triggered_by": "manual",
-                        }).execute()
-                    except Exception as e:
-                        sb.table("email_log").insert({
-                            "recipient":    f"{asm} / {rbm}",
-                            "email_to":     ", ".join(to_list),
-                            "subject":      subject,
-                            "area":         area,
-                            "status":       "failed",
-                            "error_msg":    str(e)[:200],
-                            "triggered_by": "manual",
-                        }).execute()
-
-                progress.empty()
-                load_email_log.clear()
-                if success_ct > 0:
-                    st.success(f"{success_ct}/{total_area} email berhasil dikirim.")
-                else:
-                    st.error("Tidak ada email yang terkirim. Cek konfigurasi SMTP.")
-
-    # ──────────────────────────────────────────────────────────────
-    with t2:
-        sec("MASTER PIC EMAIL PER AREA")
-        if df_pic.empty:
-            st.info("Belum ada data PIC. Jalankan SQL insert_pic_email.sql di Supabase.")
-        else:
-            st.dataframe(df_pic[["area","asm","email_asm","rbm","email_rbm"]],
-                         use_container_width=True, hide_index=True, height=500)
-            dl_btn(df_pic, "MASTER_PIC_EMAIL")
-
-    # ──────────────────────────────────────────────────────────────
-    with t3:
-        col_log, col_cfg = st.columns([3,2])
-
-        with col_log:
-            sec("LOG EMAIL TERKIRIM (50 terakhir)")
-            if df_log.empty:
-                st.info("Belum ada log email.")
-            else:
-                cols_show = [c for c in ["sent_at","area","recipient","status","triggered_by"] if c in df_log.columns]
-                st.dataframe(df_log[cols_show], use_container_width=True, hide_index=True, height=400)
-
-        with col_cfg:
-            sec("KONFIGURASI SMTP")
-            st.markdown(
-                "<p style='font-size:12px;color:#6B7280'>Isi konfigurasi SMTP kantor PMA. "
-                "Data disimpan di Supabase (terenkripsi).</p>",
-                unsafe_allow_html=True
-            )
-            sb = get_sb()
-            smtp_host = st.text_input("SMTP Host",     value=cfg.get("smtp_host",""),     key="cfg_host")
-            smtp_port = st.text_input("SMTP Port",     value=cfg.get("smtp_port","587"),  key="cfg_port")
-            smtp_user = st.text_input("SMTP User",     value=cfg.get("smtp_user",""),     key="cfg_user")
-            smtp_pass = st.text_input("SMTP Password", value=cfg.get("smtp_password",""), key="cfg_pass", type="password")
-            sender_em = st.text_input("Sender Email",  value=cfg.get("sender_email",""),  key="cfg_from")
-            cc_atasan = st.text_input("CC Atasan (pisah koma)", value=cfg.get("cc_atasan",""), key="cfg_cc")
-
-            if st.button("Simpan Konfigurasi", use_container_width=True, key="cfg_save"):
-                updates = {
-                    "smtp_host":     smtp_host,
-                    "smtp_port":     smtp_port,
-                    "smtp_user":     smtp_user,
-                    "smtp_password": smtp_pass,
-                    "sender_email":  sender_em,
-                    "cc_atasan":     cc_atasan,
-                }
-                for k, v in updates.items():
-                    sb.table("email_config").update({"value": v}).eq("key", k).execute()
-                load_email_config.clear()
-                st.success("Konfigurasi tersimpan.")
-
-            st.markdown("---")
-            st.caption("Test koneksi SMTP")
-            if st.button("Test SMTP", use_container_width=True, key="cfg_test"):
-                import smtplib
-                try:
-                    port = int(smtp_port or 587)
-                    with smtplib.SMTP(smtp_host, port, timeout=10) as s:
-                        s.ehlo(); s.starttls()
-                        s.login(smtp_user, smtp_pass)
-                    st.success("Koneksi SMTP berhasil!")
-                except Exception as e:
-                    st.error(f"Gagal: {e}")
-
-
 # ═══════════════════════════════════════════════════════════════
 # AUTH — Login dengan NIK + Password
 # ═══════════════════════════════════════════════════════════════
@@ -1874,29 +1595,11 @@ def render_change_password():
                     sb.table("app_users").update(
                         {"password": pwd_baru.strip()}
                     ).eq("nik", nik).execute()
-
-                    # Sync password baru ke master_login.xlsx di PC lokal
-                    _XLSX_LOGIN = r"D:\PROJECT FAD\MASTER UPLOADER\master_login.xlsx"
-                    try:
-                        import openpyxl as _opx
-                        _wb = _opx.load_workbook(_XLSX_LOGIN)
-                        _ws = _wb.active
-                        # Cari header row untuk tahu kolom NIK dan PASSWORD
-                        _headers = {str(cell.value).strip().upper(): cell.column
-                                    for cell in _ws[1] if cell.value}
-                        _col_nik  = _headers.get("NIIK", _headers.get("NIK", 1))
-                        _col_pass = _headers.get("PASSWORD", 3)
-                        for _row in _ws.iter_rows(min_row=2):
-                            if str(_row[_col_nik-1].value).strip() == nik:
-                                _row[_col_pass-1].value = pwd_baru.strip()
-                                break
-                        _wb.save(_XLSX_LOGIN)
-                    except Exception as _e:
-                        pass  # Gagal sync ke Excel tidak menghentikan proses
-
+                    # Clear cache dan reset session agar login ulang dengan password baru
                     load_users.clear()
                     st.session_state["pwd_changed"] = True
                     st.success("Password berhasil diperbarui. Silakan login ulang.")
+                    # Otomatis logout setelah 2 detik agar user login dengan password baru
                     import time as _time
                     _time.sleep(1.5)
                     for k in ["logged_in","user_nik","user_nama"]:
@@ -1935,84 +1638,13 @@ def main():
 
     render_change_password()
 
-    # ════════════════════════════════════════════════════════════
-    # UNIFIED SIDEBAR FILTER — 12 filter, satu untuk semua tab
-    # ════════════════════════════════════════════════════════════
-    st.sidebar.markdown(
-        "<div style='font-size:11px;font-weight:700;color:#B01C2E;"
-        "text-transform:uppercase;letter-spacing:.8px;padding:4px 0 8px'>"
-        "Filter</div>",
-        unsafe_allow_html=True,
-    )
-
-    _df_ref, _ = load_otc()
-
-    def _sel(label, col, src, key):
-        if col not in src.columns: return "Semua"
-        opts = ["Semua"] + sorted(src[col].dropna().unique().tolist())
-        return st.sidebar.selectbox(label, opts, key=key)
-
-    # Baris 1 — hierarki wilayah
-    sel_region  = _sel("Region",       "REGION",        _df_ref, "f_region")
-    _r0 = _df_ref if sel_region=="Semua" else _df_ref[_df_ref["REGION"]==sel_region]
-    sel_area    = _sel("Nama Area",    "NAMA AREA",     _r0,     "f_area")
-    _r1 = _r0 if sel_area=="Semua" else _r0[_r0["NAMA AREA"]==sel_area]
-
-    # Baris 2 — people
-    sel_asm     = _sel("ASM",          "ASM",           _r1,     "f_asm")
-    sel_rbm     = _sel("RBM",          "RBM",           _r1,     "f_rbm")
-    sel_sales   = _sel("Nama Sales",   "NAMA SALES",    _r1,     "f_sales")
-
-    # Baris 3 — outlet & toko
-    sel_channel = _sel("Channel / Jenis Outlet", "JENIS OUTLET", _r1, "f_channel")
-    sel_toko    = _sel("Nama Toko",    "NAMA TOKO",     _r1,     "f_toko")
-
-    # Baris 4 — kategori & TOP
-    sel_kat     = _sel("Kategori Overdue", "KATEGORI OVERDUE", _r1, "f_kat")
-    sel_grp     = _sel("Grouping OS",  "GROUPING OS",   _r1,     "f_grp")
-    sel_top     = _sel("TOP",          "TOP",           _r1,     "f_top")
-
-    # Baris 5 — aging
-    sel_bkt = st.sidebar.multiselect(
-        "Aging Days (Kelompok)", BUCKETS, default=BUCKETS, key="f_bkt"
-    )
-    sel_so_kat = st.sidebar.selectbox(
-        "SO Block",
-        ["Semua", "WARNING SO", "SOFT BLOCK", "CRITICAL BLOCK"],
-        key="f_so_kat"
-    )
-
-    st.sidebar.markdown("---")
-    if st.sidebar.button("Refresh Data", use_container_width=True, key="ref_all"):
-        st.cache_data.clear()
-        st.session_state["preloaded"] = False
-        st.rerun()
-    st.sidebar.caption("Cache refresh otomatis tiap 5 menit")
-
-    filters = {
-        "region":  sel_region,
-        "area":    sel_area,
-        "asm":     sel_asm,
-        "rbm":     sel_rbm,
-        "sales":   sel_sales,
-        "jenis":   sel_channel,
-        "toko":    sel_toko,
-        "kat":     sel_kat,
-        "grp":     sel_grp,
-        "top":     sel_top,
-        "bkt":     sel_bkt,
-        "so_kat":  sel_so_kat,
-    }
-
-    tab1, tab2, tab3, tab4 = st.tabs(["AR OTC — MTI NKA", "AR GT", "AR RDI", "Email Reminder"])
+    tab1, tab2, tab3 = st.tabs(["AR OTC — MTI NKA", "AR GT", "AR RDI"])
     with tab1:
-        page_otc(filters)
+        page_otc()
     with tab2:
-        page_gt(filters)
+        page_gt()
     with tab3:
-        page_rdi(filters)
-    with tab4:
-        page_email()
+        page_rdi()
 
 if __name__ == "__main__":
     main()
