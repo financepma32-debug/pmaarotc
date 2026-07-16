@@ -773,7 +773,7 @@ def render_rbm_ranking_table(dff):
 
 def render_customer_detail_table(dff):
     """Tabel detail per Kode Customer/Outlet — di bawah ranking RBM/KAM."""
-    needed = ["Kode Customer","NAMA TOKO","GROUPING OS","RBM","ASM"]
+    needed = ["Kode Customer","NAMA TOKO","JENIS OUTLET","RBM","ASM"]
     if not all(c in dff.columns for c in needed) or dff.empty:
         st.info("Data Kode Customer tidak tersedia.")
         return
@@ -800,7 +800,7 @@ def render_customer_detail_table(dff):
             f"<td class='cust-frz cust-frz-0'>{i}</td>"
             f"<td class='cust-frz cust-frz-1 cust-kode'>{r['Kode Customer']}</td>"
             f"<td class='cust-frz cust-frz-2 cust-outlet'>{r['NAMA TOKO']}</td>"
-            f"<td class='cust-frz cust-frz-3'>{r['GROUPING OS']}</td>"
+            f"<td class='cust-frz cust-frz-3'>{r['JENIS OUTLET']}</td>"
             f"<td>{r['RBM']}</td>"
             f"<td>{r['ASM']}</td>"
             f"<td>{M(r['nilai_faktur'])}</td>"
