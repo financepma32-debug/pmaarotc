@@ -1013,9 +1013,17 @@ def page_otc(filters=None):
         plot_base(fig_h, h=300); fig_h.update_layout(xaxis_tickformat=",")
         st.plotly_chart(fig_h, use_container_width=True)
     with cb2:
-        pl=[b for b in BUCKETS if bv[b]>0]
-        pv=[bv[b] for b in BUCKETS if bv[b]>0]
-        pc=[BUCKET_COLOR[b] for b in BUCKETS if bv[b]>0]
+        area_os = (dff[dff["NOMINAL"]>0].groupby("NAMA AREA")["NOMINAL"]
+                   .sum().sort_values(ascending=False))
+        top10 = area_os.head(10)
+        rest = area_os.iloc[10:].sum()
+        pl = top10.index.tolist()
+        pv = top10.values.tolist()
+        pc = CHART_PALETTE[:len(pl)]
+        if rest > 0:
+            pl.append("Lainnya")
+            pv.append(rest)
+            pc.append("#9E9E9E")
         fig_pie = go.Figure(go.Pie(labels=pl,values=pv,marker_colors=pc,hole=0.55,
             textinfo="percent",textfont_size=11,
             hovertemplate="%{label}: %{value:,.0f}<extra></extra>"))
