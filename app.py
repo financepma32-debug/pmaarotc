@@ -394,6 +394,58 @@ html, body, [class*="css"]  { font-family: 'Inter', sans-serif; }
 .rbm-table tbody tr:last-child td { border-bottom: none; }
 .rbm-th-blue   { background: #F9FAFB !important; color: #6B7280 !important; }
 .rbm-th-amber  { background: #F9FAFB !important; color: #6B7280 !important; }
+
+/* ── Tabel detail per Kode Customer — kolom beku (freeze) ─── */
+.cust-table-wrap {
+    overflow-x: auto;
+    overflow-y: auto;
+    max-height: 460px;
+    border: 1px solid #F3F4F6;
+    border-radius: 12px;
+    margin-bottom: 28px;
+}
+.cust-table thead th { position: sticky; top: 0; z-index: 2; }
+.cust-table thead th.cust-frz { z-index: 4; }
+.cust-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.cust-table th, .cust-table td {
+    padding: 9px 12px;
+    text-align: center;
+    border-bottom: 1px solid #F3F4F6;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+.cust-table thead th {
+    font-size: 10.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    color: #6B7280;
+    background: #F9FAFB;
+    border-bottom: 1px solid #ECECEC;
+}
+.cust-table tbody tr:last-child td { border-bottom: none; }
+
+/* Nama Outlet dipersempit + boleh wrap 2 baris */
+.cust-table td.cust-outlet, .cust-table th.cust-outlet {
+    max-width: 140px;
+    white-space: normal;
+    word-break: break-word;
+    text-align: left;
+}
+.cust-table td.cust-kode, .cust-table th.cust-kode { text-align: left; font-weight: 600; color: #111827; }
+
+/* Freeze No, Kode Customer, Nama Outlet, Grouping Outlet */
+.cust-table th.cust-frz, .cust-table td.cust-frz {
+    position: sticky;
+    background: #FFFFFF;
+    z-index: 1;
+}
+.cust-table thead th.cust-frz { background: #F9FAFB; z-index: 3; }
+.cust-table td.cust-frz-0, .cust-table th.cust-frz-0 { left: 0px;   width: 40px;  }
+.cust-table td.cust-frz-1, .cust-table th.cust-frz-1 { left: 40px;  width: 110px; }
+.cust-table td.cust-frz-2, .cust-table th.cust-frz-2 { left: 150px; width: 140px; }
+.cust-table td.cust-frz-3, .cust-table th.cust-frz-3 { left: 290px; width: 130px;
+    box-shadow: 3px 0 6px -2px rgba(0,0,0,0.12); }
 </style>
 """, unsafe_allow_html=True)
 
@@ -743,10 +795,10 @@ def render_customer_detail_table(dff):
         r = dict(zip(g.columns, row))
         rows_html += (
             "<tr>"
-            f"<td>{i}</td>"
-            f"<td>{r['Kode Customer']}</td>"
-            f"<td>{r['NAMA TOKO']}</td>"
-            f"<td>{r['GROUPING OS']}</td>"
+            f"<td class='cust-frz cust-frz-0'>{i}</td>"
+            f"<td class='cust-frz cust-frz-1 cust-kode'>{r['Kode Customer']}</td>"
+            f"<td class='cust-frz cust-frz-2 cust-outlet'>{r['NAMA TOKO']}</td>"
+            f"<td class='cust-frz cust-frz-3'>{r['GROUPING OS']}</td>"
             f"<td>{r['RBM']}</td>"
             f"<td>{r['ASM']}</td>"
             f"<td>{M(r['nilai_faktur'])}</td>"
@@ -761,14 +813,14 @@ def render_customer_detail_table(dff):
         )
 
     st.markdown(f"""
-    <div class="rbm-table-wrap">
-    <table class="rbm-table">
+    <div class="cust-table-wrap">
+    <table class="cust-table">
     <thead>
     <tr>
-        <th rowspan="2">No</th>
-        <th rowspan="2">Kode Customer</th>
-        <th rowspan="2">Nama Outlet</th>
-        <th rowspan="2">Grouping Outlet</th>
+        <th rowspan="2" class="cust-frz cust-frz-0">No</th>
+        <th rowspan="2" class="cust-frz cust-frz-1">Kode Customer</th>
+        <th rowspan="2" class="cust-frz cust-frz-2 cust-outlet">Nama Outlet</th>
+        <th rowspan="2" class="cust-frz cust-frz-3">Grouping Outlet</th>
         <th rowspan="2">RBM/KAM</th>
         <th rowspan="2">ROM</th>
         <th rowspan="2">Nilai Faktur</th>
