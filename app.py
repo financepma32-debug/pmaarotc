@@ -406,7 +406,7 @@ html, body, [class*="css"]  { font-family: 'Inter', sans-serif; }
 }
 .cust-table thead th { position: sticky; top: 0; z-index: 2; }
 .cust-table thead th.cust-frz { z-index: 4; }
-.cust-table { width: 100%; min-width: 1400px; table-layout: fixed; border-collapse: collapse; font-size: 12.5px; }
+.cust-table { width: 100%; min-width: 1410px; table-layout: fixed; border-collapse: collapse; font-size: 12.5px; }
 .cust-table th, .cust-table td {
     padding: 9px 12px;
     text-align: center;
@@ -824,7 +824,7 @@ def render_customer_detail_table(dff):
         <col style="width:150px">
         <col style="width:100px">
         <col style="width:100px">
-        <col style="width:90px">
+        <col style="width:100px">
         <col style="width:90px">
         <col style="width:90px">
         <col style="width:90px">
