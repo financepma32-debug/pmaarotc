@@ -974,15 +974,15 @@ def page_otc(filters=None):
     sec("DISTRIBUSI SO BLOCK PER NAMA AREA")
     pivot = (df_ov.groupby(["NAMA AREA","SO Kat"])["NOMINAL"]
              .sum().unstack(fill_value=0).reset_index())
-    for k in ["WARNING SO","SOFT BLOCK","CRITICAL BLOCK"]:
+    for k in ["Warning SO","Block SO","Critical Block SO"]:
         if k not in pivot.columns: pivot[k]=0
-    pivot["TOTAL"] = pivot[["WARNING SO","SOFT BLOCK","CRITICAL BLOCK"]].sum(axis=1)
+    pivot["TOTAL"] = pivot[["Warning SO","Block SO","Critical Block SO"]].sum(axis=1)
     pivot = pivot.nlargest(10,"TOTAL")
     fig_so = go.Figure()
     for col_key,color,name in [
-        ("CRITICAL BLOCK","#C8192E","Critical Block"),
-        ("SOFT BLOCK","#E65C00","Soft Block"),
-        ("WARNING SO","#F5A623","Warning SO"),
+        ("Critical Block SO","#C8192E","Critical Block"),
+        ("Block SO","#E65C00","Soft Block"),
+        ("Warning SO","#F5A623","Warning SO"),
     ]:
         if col_key in pivot.columns:
             fig_so.add_trace(go.Bar(
@@ -1213,15 +1213,15 @@ def page_gt(filters=None):
     sec("DISTRIBUSI SO BLOCK PER NAMA AREA")
     pivot = (df_ov.groupby(["Nama Area","SO Kat"])["Nominal"]
              .sum().unstack(fill_value=0).reset_index())
-    for k in ["WARNING SO","SOFT BLOCK","CRITICAL BLOCK"]:
+    for k in ["Warning SO","Block SO","Critical Block SO"]:
         if k not in pivot.columns: pivot[k]=0
-    pivot["TOTAL"] = pivot[["WARNING SO","SOFT BLOCK","CRITICAL BLOCK"]].sum(axis=1)
+    pivot["TOTAL"] = pivot[["Warning SO","Block SO","Critical Block SO"]].sum(axis=1)
     pivot = pivot.nlargest(10,"TOTAL")
     fig_so = go.Figure()
     for col_key,color,name in [
-        ("CRITICAL BLOCK","#C8192E","Critical Block"),
-        ("SOFT BLOCK","#E65C00","Soft Block"),
-        ("WARNING SO","#F5A623","Warning SO"),
+        ("Critical Block SO","#C8192E","Critical Block"),
+        ("Block SO","#E65C00","Soft Block"),
+        ("Warning SO","#F5A623","Warning SO"),
     ]:
         if col_key in pivot.columns:
             fig_so.add_trace(go.Bar(
