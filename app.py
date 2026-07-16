@@ -435,6 +435,7 @@ OTC_ALL_COLS = [
     "91-120 DAYS","121+ DAYS","<2026",
     "KELOMPOK2","OVERDUE","TANGGAL HARI INII","batas 2025","OVERDUE?",
     "ACTUAL PELUNASAN","TARGET PELUNASAN","DUE DATE","Qty Faktur Gantung",
+    "Kode Customer",
 ]
 
 # GT — kolom dari gt_to_master.py
