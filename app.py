@@ -406,12 +406,14 @@ html, body, [class*="css"]  { font-family: 'Inter', sans-serif; }
 }
 .cust-table thead th { position: sticky; top: 0; z-index: 2; }
 .cust-table thead th.cust-frz { z-index: 4; }
-.cust-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.cust-table { width: 100%; min-width: 1400px; table-layout: fixed; border-collapse: collapse; font-size: 12.5px; }
 .cust-table th, .cust-table td {
     padding: 9px 12px;
     text-align: center;
     border-bottom: 1px solid #F3F4F6;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     font-variant-numeric: tabular-nums;
 }
 .cust-table thead th {
@@ -425,11 +427,11 @@ html, body, [class*="css"]  { font-family: 'Inter', sans-serif; }
 }
 .cust-table tbody tr:last-child td { border-bottom: none; }
 
-/* Nama Outlet dipersempit + boleh wrap 2 baris */
+/* Nama Outlet — boleh wrap ke baris baru di antara kata (bukan per huruf) */
 .cust-table td.cust-outlet, .cust-table th.cust-outlet {
-    max-width: 140px;
     white-space: normal;
-    word-break: break-word;
+    overflow-wrap: normal;
+    text-overflow: clip;
     text-align: left;
 }
 .cust-table td.cust-kode, .cust-table th.cust-kode { text-align: left; font-weight: 600; color: #111827; }
@@ -441,10 +443,10 @@ html, body, [class*="css"]  { font-family: 'Inter', sans-serif; }
     z-index: 1;
 }
 .cust-table thead th.cust-frz { background: #F9FAFB; z-index: 3; }
-.cust-table td.cust-frz-0, .cust-table th.cust-frz-0 { left: 0px;   width: 40px;  }
-.cust-table td.cust-frz-1, .cust-table th.cust-frz-1 { left: 40px;  width: 110px; }
-.cust-table td.cust-frz-2, .cust-table th.cust-frz-2 { left: 150px; width: 140px; }
-.cust-table td.cust-frz-3, .cust-table th.cust-frz-3 { left: 290px; width: 130px;
+.cust-table td.cust-frz-0, .cust-table th.cust-frz-0 { left: 0px;   width: 50px;  }
+.cust-table td.cust-frz-1, .cust-table th.cust-frz-1 { left: 50px;  width: 110px; }
+.cust-table td.cust-frz-2, .cust-table th.cust-frz-2 { left: 160px; width: 170px; }
+.cust-table td.cust-frz-3, .cust-table th.cust-frz-3 { left: 330px; width: 150px;
     box-shadow: 3px 0 6px -2px rgba(0,0,0,0.12); }
 </style>
 """, unsafe_allow_html=True)
@@ -815,6 +817,22 @@ def render_customer_detail_table(dff):
     st.markdown(f"""
     <div class="cust-table-wrap">
     <table class="cust-table">
+    <colgroup>
+        <col style="width:50px">
+        <col style="width:110px">
+        <col style="width:170px">
+        <col style="width:150px">
+        <col style="width:100px">
+        <col style="width:100px">
+        <col style="width:90px">
+        <col style="width:90px">
+        <col style="width:90px">
+        <col style="width:90px">
+        <col style="width:70px">
+        <col style="width:110px">
+        <col style="width:110px">
+        <col style="width:70px">
+    </colgroup>
     <thead>
     <tr>
         <th rowspan="2" class="cust-frz cust-frz-0">No</th>
