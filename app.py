@@ -361,6 +361,39 @@ html, body, [class*="css"]  { font-family: 'Inter', sans-serif; }
     border-color: #B01C2E !important;
     color: #B01C2E !important;
 }
+
+/* ── Ranking RBM/KAM table ─────────────────────────── */
+.rbm-table-wrap {
+    overflow-x: auto;
+    border: 1px solid #F3F4F6;
+    border-radius: 12px;
+    margin-bottom: 28px;
+}
+.rbm-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.rbm-table th, .rbm-table td {
+    padding: 9px 12px;
+    text-align: center;
+    border-bottom: 1px solid #F3F4F6;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+.rbm-table thead th {
+    font-size: 10.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    color: #6B7280;
+    background: #F9FAFB;
+    border-bottom: 1px solid #ECECEC;
+}
+.rbm-table td:first-child, .rbm-table th:first-child {
+    text-align: left;
+    font-weight: 600;
+    color: #111827;
+}
+.rbm-table tbody tr:last-child td { border-bottom: none; }
+.rbm-th-blue   { background: #F9FAFB !important; color: #6B7280 !important; }
+.rbm-th-amber  { background: #F9FAFB !important; color: #6B7280 !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -618,6 +651,68 @@ def pma_header(title, last_updated, n_faktur):
     </div>
     """, unsafe_allow_html=True)
 
+# ── RANKING RBM/KAM — tabel header 2 lapis (Current/Overdue vs Collection) ──
+def render_rbm_ranking_table(dff):
+    if "RBM" not in dff.columns or dff.empty:
+        st.info("Data RBM/KAM tidak tersedia.")
+        return
+
+    g = dff.groupby("RBM", dropna=False).agg(
+        nilai_faktur=("Nilai Faktur", "sum"),
+        current=("CURRENT", "sum"),
+        overdue=("OVERDUE", "sum"),
+        sisa_ar=("NOMINAL", "sum"),
+        actual=("ACTUAL PELUNASAN", "sum"),
+        target=("TARGET PELUNASAN", "sum"),
+    ).reset_index()
+    g["RBM"] = g["RBM"].fillna("–").replace("", "–")
+    g["pct_od"]   = g.apply(lambda r: (r["overdue"]/r["sisa_ar"]*100) if r["sisa_ar"] else 0, axis=1)
+    g["pct_coll"] = g.apply(lambda r: (r["actual"]/r["target"]*100) if r["target"] else 0, axis=1)
+    g = g.sort_values("sisa_ar", ascending=False)
+
+    rows_html = ""
+    for _, r in g.iterrows():
+        rows_html += (
+            "<tr>"
+            f"<td>{r['RBM']}</td>"
+            f"<td>{M(r['nilai_faktur'])}</td>"
+            f"<td class='rbm-th-blue'>{M(r['current'])}</td>"
+            f"<td class='rbm-th-blue'>{M(r['overdue'])}</td>"
+            f"<td class='rbm-th-blue'>{M(r['sisa_ar'])}</td>"
+            f"<td class='rbm-th-blue'>{r['pct_od']:.2f}%</td>"
+            f"<td class='rbm-th-amber'>{M(r['actual'])}</td>"
+            f"<td class='rbm-th-amber'>{M(r['target'])}</td>"
+            f"<td class='rbm-th-amber'>{r['pct_coll']:.2f}%</td>"
+            "</tr>"
+        )
+
+    st.markdown(f"""
+    <div class="rbm-table-wrap">
+    <table class="rbm-table">
+    <thead>
+    <tr>
+        <th rowspan="2">RBM/KAM</th>
+        <th rowspan="2">Nilai Faktur</th>
+        <th colspan="4" class="rbm-th-blue">Sisa AR Current Vs Overdue</th>
+        <th colspan="3" class="rbm-th-amber">Collection AR Overdue</th>
+    </tr>
+    <tr>
+        <th class="rbm-th-blue">Current</th>
+        <th class="rbm-th-blue">Overdue</th>
+        <th class="rbm-th-blue">Sisa AR</th>
+        <th class="rbm-th-blue">%OD</th>
+        <th class="rbm-th-amber">Actual Pelunasan</th>
+        <th class="rbm-th-amber">Target Pelunasan</th>
+        <th class="rbm-th-amber">%Coll</th>
+    </tr>
+    </thead>
+    <tbody>
+    {rows_html}
+    </tbody>
+    </table>
+    </div>
+    """, unsafe_allow_html=True)
+
 # ════════════════════════════════════════════════════════════════════
 # PAGE: AR OTC
 # ════════════════════════════════════════════════════════════════════
@@ -667,6 +762,10 @@ def page_otc(filters=None):
     st.markdown("<br>",unsafe_allow_html=True)
 
     bv, grand = bucket_strip(dff)
+
+    # ════ RANKING RBM/KAM BERDASARKAN OUTSTANDING ════
+    sec("RANKING RBM/KAM BERDASARKAN OUTSTANDING")
+    render_rbm_ranking_table(dff)
 
     # ════ SO BLOCK — 1 TABEL dengan kolom SO Status, Area, Kode Customer, dll ════
     sec("STATUS SO BLOCK — REKOMENDASI TINDAKAN")
