@@ -489,7 +489,7 @@ OTC_ALL_COLS = [
     "91-120 DAYS","121+ DAYS","<2026",
     "KELOMPOK2","OVERDUE","TANGGAL HARI INII","batas 2025","OVERDUE?",
     "ACTUAL PELUNASAN","TARGET PELUNASAN","DUE DATE","Qty Faktur Gantung",
-    "Kode Customer",
+    "Kode Customer","PJ/PIC","DEADLINE","KET",
 ]
 
 # GT — kolom dari gt_to_master.py
@@ -1098,18 +1098,30 @@ def page_otc(filters=None):
     # ════ DETAIL FAKTUR ════
     ovrd_ct=int((dff["OVERDUE?"]>0).sum())
     sec(f"DETAIL FAKTUR — {ovrd_ct:,} FAKTUR OVERDUE")
-    COLS=["NAMA AREA","RBM","ASM","NAMA SALES","NAMA TOKO","No Faktur","Tanggal Faktur","Tanggal JT","Nilai Faktur","NOMINAL","Saldo Akhir","KELOMPOK","OVERDUE?","GROUPING OS"]
+    COLS=["NAMA AREA","RBM","Kode Customer","NAMA TOKO","No Faktur","Tanggal Faktur","Tanggal JT",
+          "Nilai Faktur","NOMINAL","KELOMPOK","GROUPING OS","Action Plan","DEADLINE","PJ/PIC","KET"]
     cols_ok=[c for c in COLS if c in dff.columns]
     tbl=dff[cols_ok].copy()
+    tbl["Kategori SO"] = dff["KELOMPOK"].map({
+        "CURRENT":"Warning SO","1-7 DAYS":"Warning SO","8-30 DAYS":"Warning SO",
+        "31-60 DAYS":"Block SO","61-90 DAYS":"Block SO",
+        "91-120 DAYS":"Critical Block SO","121+ DAYS":"Critical Block SO","<2026":"Critical Block SO",
+    }).fillna("Warning SO")
     if "Tanggal Faktur" in tbl.columns: tbl["Tanggal Faktur"]=tbl["Tanggal Faktur"].dt.strftime("%d %b %Y")
     if "Tanggal JT" in tbl.columns: tbl["Tanggal JT"]=tbl["Tanggal JT"].dt.strftime("%d %b %Y")
-    for c in ["Nilai Faktur","Saldo Akhir"]:
+    for c in ["Nilai Faktur","NOMINAL"]:
         if c in tbl.columns: tbl[c]=tbl[c].apply(R)
-    tbl.rename(columns={"NAMA AREA":"Nama Area","NAMA SALES":"Nama Sales","NAMA TOKO":"Nama Toko","Saldo Akhir":"Sisa AR","OVERDUE?":"Hari OD","KELOMPOK":"Kelompok","GROUPING OS":"Grouping OS"},inplace=True)
+    tbl.rename(columns={"NAMA AREA":"Nama Area","NAMA TOKO":"Nama Toko","NOMINAL":"Sisa AR",
+                         "KELOMPOK":"OVERDUE (Kelompok)","GROUPING OS":"Grouping OS"},inplace=True)
+    DISPLAY_ORDER=["Nama Area","RBM","Kode Customer","Nama Toko","No Faktur","Tanggal Faktur","Tanggal JT",
+                   "Nilai Faktur","Sisa AR","Kategori SO","OVERDUE (Kelompok)","Grouping OS","Action Plan",
+                   "DEADLINE","PJ/PIC","KET"]
+    tbl = tbl[[c for c in DISPLAY_ORDER if c in tbl.columns]]
     tbl.insert(0,"#",range(1,len(tbl)+1))
     with st.expander(f"Tampilkan {len(tbl):,} baris · OS Total: {M(tn)}",expanded=False):
         st.dataframe(tbl,use_container_width=True,hide_index=True,height=440)
         dl_btn(dff[cols_ok],"OS_MTI_NKA_DETAIL","Download Detail Faktur")
+
 
 # ════════════════════════════════════════════════════════════════════
 # PAGE: AR GT
