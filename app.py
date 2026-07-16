@@ -981,7 +981,7 @@ def page_otc(filters=None):
     fig_so = go.Figure()
     for col_key,color,name in [
         ("Critical Block SO","#C8192E","Critical Block"),
-        ("Block SO","#E65C00","Soft Block"),
+        ("Block SO","#E65C00","Block SO"),
         ("Warning SO","#F5A623","Warning SO"),
     ]:
         if col_key in pivot.columns:
@@ -1117,7 +1117,7 @@ def page_otc(filters=None):
                    "Nilai Faktur","Sisa AR","Kategori SO","OVERDUE (Kelompok)","Grouping OS","Action Plan",
                    "DEADLINE","PJ/PIC","KET"]
     tbl = tbl[[c for c in DISPLAY_ORDER if c in tbl.columns]]
-    tbl.insert(0,"#",range(1,len(tbl)+1))
+    tbl.insert(0,"No",range(1,len(tbl)+1))
     with st.expander(f"Tampilkan {len(tbl):,} baris · OS Total: {M(tn)}",expanded=False):
         st.dataframe(tbl,use_container_width=True,hide_index=True,height=440)
         dl_btn(dff[cols_ok],"OS_MTI_NKA_DETAIL","Download Detail Faktur")
@@ -1220,7 +1220,7 @@ def page_gt(filters=None):
     fig_so = go.Figure()
     for col_key,color,name in [
         ("Critical Block SO","#C8192E","Critical Block"),
-        ("Block SO","#E65C00","Soft Block"),
+        ("Block SO","#E65C00","Block SO"),
         ("Warning SO","#F5A623","Warning SO"),
     ]:
         if col_key in pivot.columns:
