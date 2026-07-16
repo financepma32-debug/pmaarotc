@@ -795,11 +795,22 @@ def page_otc(filters=None):
         if "Nilai Faktur" in df_ov.columns:
             tot = df_ov.groupby(grp_cols)["Nilai Faktur"].sum().reset_index().rename(columns={"Nilai Faktur":"Total Nilai Faktur"})
             tbl_so = tbl_so.merge(tot, on=grp_cols, how="left")
+        # Kode Customer per toko (ambil kode customer pertama yang ditemukan di grup)
+        if "Kode Customer" in df_ov.columns:
+            kc = df_ov.groupby(grp_cols)["Kode Customer"].first().reset_index()
+            tbl_so = tbl_so.merge(kc, on=grp_cols, how="left")
         # Filter hanya yang ada outstanding
         tbl_so = tbl_so[(tbl_so.get("Warning SO",0)!=0)|(tbl_so.get("Block SO",0)!=0)|(tbl_so.get("Critical Block SO",0)!=0)]
         tbl_so = tbl_so.sort_values("Critical Block SO", ascending=False).reset_index(drop=True)
         tbl_so.insert(0,"Nomor", range(1, len(tbl_so)+1))
-        tbl_so.rename(columns={"NAMA AREA":"Nama Area","NAMA TOKO":"Nama Toko","No Faktur SAP":"Kode Customer"}, inplace=True)
+        tbl_so.rename(columns={"NAMA AREA":"Nama Area","NAMA TOKO":"Nama Toko"}, inplace=True)
+        # Pindahkan "Kode Customer" ke posisi tepat setelah "Nama Area"
+        if "Kode Customer" in tbl_so.columns:
+            cols = list(tbl_so.columns)
+            cols.remove("Kode Customer")
+            insert_at = cols.index("Nama Area") + 1
+            cols.insert(insert_at, "Kode Customer")
+            tbl_so = tbl_so[cols]
         for col in ["Warning SO","Block SO","Critical Block SO","Total Nilai Faktur"]:
             if col in tbl_so.columns:
                 tbl_so[col] = tbl_so[col].apply(lambda x: f"{x:,.0f}" if x!=0 else "-")
