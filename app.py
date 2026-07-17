@@ -916,7 +916,7 @@ def page_otc(filters=None):
     bv, grand = bucket_strip(dff)
 
     # ════ RANKING RBM/KAM BERDASARKAN OUTSTANDING ════
-    sec("RANKING RBM/KAM BERDASARKAN OUTSTANDING")
+    sec("RANKING KAM/RBM BERDASARKAN OUTSTANDING & COLLECTION")
     render_rbm_ranking_table(dff)
 
     # ════ TABEL DETAIL PER KODE CUSTOMER (judul sementara, ganti sesuai kebutuhan) ════
@@ -1826,7 +1826,7 @@ def main():
             "Pilih data di atas untuk mengaktifkan filter.</div>",
             unsafe_allow_html=True)
         # Tampilkan tab tanpa filter
-        tab1, tab2, tab3 = st.tabs(["AR OTC — MTI NKA", "AR GT", "AR RDI"])
+        tab1, tab2, tab3 = st.tabs(["Channel MT PMA", "Channel GT PMA", "PT RDI"])
         with tab1: page_otc({})
         with tab2: page_gt({})
         with tab3: page_rdi({})
@@ -1880,7 +1880,7 @@ def main():
                "grp":sel_grp,"top":sel_top,"bkt":sel_bkt,"so_kat":sel_so}
 
     # Tab konten — ikut pilihan di sidebar
-    tab1, tab2, tab3 = st.tabs(["AR OTC — MTI NKA", "AR GT", "AR RDI"])
+    tab1, tab2, tab3 = st.tabs(["Channel MT PMA", "Channel GT PMA", "PT RDI"])
     with tab1:
         page_otc(filters)
     with tab2:
