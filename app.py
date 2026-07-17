@@ -365,7 +365,7 @@ html, body, [class*="css"]  { font-family: 'Inter', sans-serif; }
 /* ── Ranking RBM/KAM table ─────────────────────────── */
 .rbm-table-wrap {
     overflow-x: auto;
-    border: 1px solid #F3F4F6;
+    border: 1.5px solid #D1D5DB;
     border-radius: 12px;
     margin-bottom: 28px;
 }
@@ -373,18 +373,21 @@ html, body, [class*="css"]  { font-family: 'Inter', sans-serif; }
 .rbm-table th, .rbm-table td {
     padding: 9px 12px;
     text-align: center;
-    border-bottom: 1px solid #F3F4F6;
+    border-bottom: 1px solid #D1D5DB;
+    border-right: 1px solid #E5E7EB;
     white-space: nowrap;
     font-variant-numeric: tabular-nums;
 }
+.rbm-table th:last-child, .rbm-table td:last-child { border-right: none; }
 .rbm-table thead th {
     font-size: 10.5px;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: .4px;
     color: #6B7280;
-    background: #F9FAFB;
-    border-bottom: 1px solid #ECECEC;
+    background: #F3F4F6;
+    border-bottom: 1.5px solid #9CA3AF;
+    border-right: 1px solid #D1D5DB;
 }
 .rbm-table td:first-child, .rbm-table th:first-child {
     text-align: left;
@@ -392,15 +395,15 @@ html, body, [class*="css"]  { font-family: 'Inter', sans-serif; }
     color: #111827;
 }
 .rbm-table tbody tr:last-child td { border-bottom: none; }
-.rbm-th-blue   { background: #F9FAFB !important; color: #6B7280 !important; }
-.rbm-th-amber  { background: #F9FAFB !important; color: #6B7280 !important; }
+.rbm-th-blue   { background: #F3F4F6 !important; color: #6B7280 !important; }
+.rbm-th-amber  { background: #F3F4F6 !important; color: #6B7280 !important; }
 
 /* ── Tabel detail per Kode Customer — kolom beku (freeze) ─── */
 .cust-table-wrap {
     overflow-x: auto;
     overflow-y: auto;
     max-height: 460px;
-    border: 1px solid #F3F4F6;
+    border: 1.5px solid #D1D5DB;
     border-radius: 12px;
     margin-bottom: 28px;
 }
@@ -410,20 +413,23 @@ html, body, [class*="css"]  { font-family: 'Inter', sans-serif; }
 .cust-table th, .cust-table td {
     padding: 9px 12px;
     text-align: center;
-    border-bottom: 1px solid #F3F4F6;
+    border-bottom: 1px solid #D1D5DB;
+    border-right: 1px solid #E5E7EB;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     font-variant-numeric: tabular-nums;
 }
+.cust-table th:last-child, .cust-table td:last-child { border-right: none; }
 .cust-table thead th {
     font-size: 10.5px;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: .4px;
     color: #6B7280;
-    background: #F9FAFB;
-    border-bottom: 1px solid #ECECEC;
+    background: #F3F4F6;
+    border-bottom: 1.5px solid #9CA3AF;
+    border-right: 1px solid #D1D5DB;
 }
 .cust-table tbody tr:last-child td { border-bottom: none; }
 
