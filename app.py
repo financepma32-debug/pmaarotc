@@ -398,6 +398,10 @@ html, body, [class*="css"]  { font-family: 'Inter', sans-serif; }
 .rbm-th-blue   { background: #F3F4F6 !important; color: #6B7280 !important; }
 .rbm-th-amber  { background: #F3F4F6 !important; color: #6B7280 !important; }
 
+/* Varian scroll — tampilin ~10 baris, sisanya scroll di dalam box */
+.rbm-table-wrap.scroll-box { max-height: 470px; overflow-y: auto; }
+.rbm-table-wrap.scroll-box .rbm-table thead th { position: sticky; top: 0; z-index: 2; }
+
 /* ── Tabel detail per Kode Customer — kolom beku (freeze) ─── */
 .cust-table-wrap {
     overflow-x: auto;
@@ -816,7 +820,7 @@ def render_area_ranking_table(dff):
         )
 
     st.markdown(f"""
-    <div class="rbm-table-wrap">
+    <div class="rbm-table-wrap scroll-box">
     <table class="rbm-table">
     <thead>
     <tr>
