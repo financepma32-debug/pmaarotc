@@ -517,11 +517,14 @@ GT_ALL_COLS = [
 # ── FORMAT ───────────────────────────────────────────────────────────────────
 def M(v):
     v = float(v)
-    if abs(v)>=1_000_000_000: return f"{v/1_000_000_000:.2f}M"
-    if abs(v)>=1_000_000:     return f"{v/1_000_000:.1f}Jt"
+    if abs(v)>=1_000_000_000: return f"{v/1_000_000_000:.2f}".replace(".",",") + "M"
+    if abs(v)>=1_000_000:     return f"{v/1_000_000:.1f}".replace(".",",") + "Jt"
     return f"{v:,.0f}"
 def R(v): return f"{float(v):,.0f}"
 def P(n,d): return f"{n/d*100:.1f}%" if d else "–"
+def D(v):
+    """Format angka BUKAN uang (qty/jumlah baris) — pemisah ribuan pakai titik, cth: 46.482"""
+    return f"{int(round(float(v))):,}".replace(",",".")
 
 # ── SUPABASE — project sama, anon/service role sama ──────────────────────────
 @st.cache_resource(show_spinner=False)
@@ -701,7 +704,7 @@ def pma_header(title, last_updated, n_faktur):
       </div>
       <div class="upd-bar">
         <span>Update terakhir: <strong>{last_updated}</strong></span>
-        <span>{n_faktur:,} faktur ditampilkan</span>
+        <span>{D(n_faktur)} faktur ditampilkan</span>
       </div>
     </div>
     """, unsafe_allow_html=True)
@@ -907,7 +910,7 @@ def page_otc(filters=None):
     kpi(c3,"Current",M(tc),P(tc,tn)+" dari total","green")
     kpi(c4,"% Collection",P(ta,tt),f"Actual {M(ta)} / Target {M(tt)}","gold")
     kpi(c5,"Due Date Hari Ini",M(td),"Nominal jatuh tempo hari ini","stone")
-    kpi(c6,"Qty Faktur Gantung",f"{tq:,}",f"{len(dff):,} baris data","orange")
+    kpi(c6,"Qty Faktur Gantung",D(tq),f"{D(len(dff))} baris data","orange")
     st.markdown("<br>",unsafe_allow_html=True)
 
     bv, grand = bucket_strip(dff)
@@ -1105,7 +1108,7 @@ def page_otc(filters=None):
 
     # ════ DETAIL FAKTUR ════
     ovrd_ct=int((dff["OVERDUE?"]>0).sum())
-    sec(f"DETAIL FAKTUR — {ovrd_ct:,} FAKTUR OVERDUE")
+    sec(f"DETAIL FAKTUR — {D(ovrd_ct)} FAKTUR OVERDUE")
     COLS=["NAMA AREA","RBM","Kode Customer","NAMA TOKO","No Faktur","Tanggal Faktur","Tanggal JT",
           "Nilai Faktur","NOMINAL","KELOMPOK","GROUPING OS","Action Plan","DEADLINE","PJ/PIC","KET"]
     cols_ok=[c for c in COLS if c in dff.columns]
@@ -1126,7 +1129,7 @@ def page_otc(filters=None):
                    "DEADLINE","PJ/PIC","KET"]
     tbl = tbl[[c for c in DISPLAY_ORDER if c in tbl.columns]]
     tbl.insert(0,"No",range(1,len(tbl)+1))
-    with st.expander(f"Tampilkan {len(tbl):,} baris · OS Total: {M(tn)}",expanded=False):
+    with st.expander(f"Tampilkan {D(len(tbl))} baris · OS Total: {M(tn)}",expanded=False):
         st.dataframe(tbl,use_container_width=True,hide_index=True,height=440)
         dl_btn(dff[cols_ok],"OS_MTI_NKA_DETAIL","Download Detail Faktur")
 
@@ -1176,7 +1179,7 @@ def page_gt(filters=None):
     kpi(c3,"Current",M(tc),P(tc,tn)+" dari total","green")
     kpi(c4,"% Collection",P(ta,tt),f"Actual {M(ta)} / Target {M(tt)}","gold")
     kpi(c5,"Due Date Hari Ini",M(td),"Nominal jatuh tempo hari ini","stone")
-    kpi(c6,"Qty Faktur",f"{tq:,}",f"{len(dff):,} baris data","orange")
+    kpi(c6,"Qty Faktur",D(tq),f"{D(len(dff))} baris data","orange")
     st.markdown("<br>",unsafe_allow_html=True)
 
     bv, grand = bucket_strip(dff)
@@ -1344,7 +1347,7 @@ def page_gt(filters=None):
 
     # ════ DETAIL FAKTUR ════
     ovrd_ct=int((dff["OVERDUE?"]>0).sum())
-    sec(f"DETAIL FAKTUR — {ovrd_ct:,} FAKTUR OVERDUE")
+    sec(f"DETAIL FAKTUR — {D(ovrd_ct)} FAKTUR OVERDUE")
     COLS=["Nama Area","RBM","ASM","Nama Sales","Nama Toko","No Faktur","Tanggal Faktur","Tanggal JT","Nilai Faktur","Nominal","Saldo Akhir","KELOMPOK","OVERDUE?","Grouping OS"]
     cols_ok=[c for c in COLS if c in dff.columns]
     tbl=dff[cols_ok].copy()
@@ -1354,7 +1357,7 @@ def page_gt(filters=None):
         if c in tbl.columns: tbl[c]=tbl[c].apply(R)
     tbl.rename(columns={"Nama Area":"Nama Area","Nama Sales":"Nama Sales","Nama Toko":"Nama Toko","Saldo Akhir":"Sisa AR","OVERDUE?":"Hari OD","KELOMPOK":"Kelompok","Grouping OS":"Grouping OS"},inplace=True)
     tbl.insert(0,"#",range(1,len(tbl)+1))
-    with st.expander(f"Tampilkan {len(tbl):,} baris · OS Total: {M(tn)}",expanded=False):
+    with st.expander(f"Tampilkan {D(len(tbl))} baris · OS Total: {M(tn)}",expanded=False):
         st.dataframe(tbl,use_container_width=True,hide_index=True,height=440)
         dl_btn(dff[cols_ok],"GT_DETAIL","Download Detail Faktur GT")
 
@@ -1476,7 +1479,7 @@ def page_rdi(filters=None):
     kpi(c3,"Current",               M(tc),  P(tc,tn)+" dari total","green")
     kpi(c4,"% Collection",          P(ta,tt),f"Actual {M(ta)} / Target {M(tt)}","gold")
     kpi(c5,"Due Date Hari Ini",     M(td),  "Nominal jatuh tempo hari ini","stone")
-    kpi(c6,"Qty Faktur Gantung",    f"{tq:,}",f"{len(dff):,} baris data","orange")
+    kpi(c6,"Qty Faktur Gantung",    D(tq),f"{D(len(dff))} baris data","orange")
     st.markdown("<br>",unsafe_allow_html=True)
 
     bv, grand = bucket_strip(dff)
@@ -1558,7 +1561,7 @@ def page_rdi(filters=None):
 
     # Detail faktur
     ovrd_ct=int((dff["OVERDUE?"]>0).sum()) if "OVERDUE?" in dff.columns else 0
-    sec(f"DETAIL FAKTUR RDI — {ovrd_ct:,} FAKTUR OVERDUE")
+    sec(f"DETAIL FAKTUR RDI — {D(ovrd_ct)} FAKTUR OVERDUE")
     COLS=["Nama Area","ASM","Nama Sales","Nama Toko","No Faktur",
           "Tanggal Faktur","Tanggal JT","Nilai Faktur","Nominal",
           "KELOMPOK","OVERDUE?","Grouping OS"]
@@ -1570,7 +1573,7 @@ def page_rdi(filters=None):
         if c in tbl.columns: tbl[c]=tbl[c].apply(R)
     tbl.rename(columns={"OVERDUE?":"Hari OD","KELOMPOK":"Kelompok","Grouping OS":"Grouping OS"},inplace=True)
     tbl.insert(0,"#",range(1,len(tbl)+1))
-    with st.expander(f"Tampilkan {len(tbl):,} baris · OS Total: {M(tn)}",expanded=False):
+    with st.expander(f"Tampilkan {D(len(tbl))} baris · OS Total: {M(tn)}",expanded=False):
         st.dataframe(tbl,use_container_width=True,hide_index=True,height=440)
         dl_btn(dff[cols_ok],"RDI_DETAIL","Download Detail Faktur RDI")
 
