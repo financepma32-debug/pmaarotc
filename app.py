@@ -508,8 +508,10 @@ GT_NUMERIC = {
     "CURRENT","1-7 DAYS","8-30 DAYS","31-60 DAYS","61-90 DAYS",
     "91-120 DAYS","121+ DAYS","<2026",
     "OVERDUE","OVERDUE?","ACTUAL PELUNASAN","TARGET PELUNASAN","DUE DATE","Qty Faktur",
+    "NILAI DN KLAIM","NOMINAL BAYAR 2",
 }
-GT_DATE = {"Tanggal Faktur","Tanggal JT","Tgl Target Pelunasan","TANGGAL HARI INII","batas 2025"}
+GT_DATE = {"Tanggal Faktur","Tanggal JT","Tgl Target Pelunasan","TANGGAL HARI INII","batas 2025",
+           "TGL BAYAR KE FINANCE","DEADLINE"}
 GT_ALL_COLS = [
     "Nama Area","Nama Sales","Nama Toko","Kategori Overdue","Region",
     "Jenis Outlet","Nominal","Grouping OS","RBM","ASM","No Faktur",
@@ -522,6 +524,9 @@ GT_ALL_COLS = [
     "91-120 DAYS","121+ DAYS","<2026",
     "KELOMPOK2","OVERDUE","TANGGAL HARI INII","batas 2025","OVERDUE?",
     "ACTUAL PELUNASAN","TARGET PELUNASAN","DUE DATE","Qty Faktur",
+    "NILAI DN KLAIM","NO SURKOM","NO DN AREA","KURANG KELENGKAPAN 1",
+    "TGL BAYAR KE FINANCE","NOMINAL BAYAR 2","NO PO","NO SURAT JALAN",
+    "DEADLINE","PJ/PIC","PELAKU",
 ]
 
 # ── FORMAT ───────────────────────────────────────────────────────────────────
