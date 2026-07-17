@@ -780,6 +780,68 @@ def render_rbm_ranking_table(dff):
     """, unsafe_allow_html=True)
 
 
+# ── OUTSTANDING BY AREA (GT) — Nama Area, RBM, ROM, Nilai Faktur, Current/Overdue/Sisa AR/%OD ──
+def render_area_ranking_table(dff):
+    needed = ["Nama Area","RBM","ASM"]
+    if not all(c in dff.columns for c in needed) or dff.empty:
+        st.info("Data Nama Area tidak tersedia.")
+        return
+
+    g = dff.groupby(needed, dropna=False).agg(
+        nilai_faktur=("Nilai Faktur", "sum"),
+        current=("CURRENT", "sum"),
+        overdue=("OVERDUE", "sum"),
+        sisa_ar=("Nominal", "sum"),
+    ).reset_index()
+    for c in needed:
+        g[c] = g[c].fillna("–").replace("", "–")
+    g["pct_od"] = g.apply(lambda r: (r["overdue"]/r["sisa_ar"]*100) if r["sisa_ar"] else 0, axis=1)
+    g = g.sort_values("sisa_ar", ascending=False)
+
+    rows_html = ""
+    for i, row in enumerate(g.itertuples(index=False), start=1):
+        r = dict(zip(g.columns, row))
+        rows_html += (
+            "<tr>"
+            f"<td>{i}</td>"
+            f"<td>{r['Nama Area']}</td>"
+            f"<td>{r['RBM']}</td>"
+            f"<td>{r['ASM']}</td>"
+            f"<td>{M(r['nilai_faktur'])}</td>"
+            f"<td>{M(r['current'])}</td>"
+            f"<td>{M(r['overdue'])}</td>"
+            f"<td>{M(r['sisa_ar'])}</td>"
+            f"<td>{r['pct_od']:.2f}%</td>"
+            "</tr>"
+        )
+
+    st.markdown(f"""
+    <div class="rbm-table-wrap">
+    <table class="rbm-table">
+    <thead>
+    <tr>
+        <th rowspan="2">No</th>
+        <th rowspan="2">Nama Area</th>
+        <th rowspan="2">RBM</th>
+        <th rowspan="2">ROM</th>
+        <th rowspan="2">Nilai Faktur</th>
+        <th colspan="4" class="rbm-th-blue">Sisa AR Current Vs Overdue</th>
+    </tr>
+    <tr>
+        <th class="rbm-th-blue">Current</th>
+        <th class="rbm-th-blue">Overdue</th>
+        <th class="rbm-th-blue">Sisa AR</th>
+        <th class="rbm-th-blue">%OD</th>
+    </tr>
+    </thead>
+    <tbody>
+    {rows_html}
+    </tbody>
+    </table>
+    </div>
+    """, unsafe_allow_html=True)
+
+
 def render_customer_detail_table(dff):
     """Tabel detail per Kode Customer/Outlet — di bawah ranking RBM/KAM."""
     needed = ["Kode Customer","NAMA TOKO","JENIS OUTLET","RBM","ASM"]
@@ -1189,6 +1251,10 @@ def page_gt(filters=None):
     st.markdown("<br>",unsafe_allow_html=True)
 
     bv, grand = bucket_strip(dff)
+
+    # ════ OUTSTANDING BY AREA ════
+    sec("OUTSTANDING BY AREA")
+    render_area_ranking_table(dff)
 
     # ════ SO BLOCK — 1 TABEL dengan kolom SO Status, Area, Kode Customer, dll ════
     sec("STATUS SO BLOCK GT — REKOMENDASI TINDAKAN")
