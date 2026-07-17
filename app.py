@@ -920,7 +920,7 @@ def page_otc(filters=None):
     render_rbm_ranking_table(dff)
 
     # ════ TABEL DETAIL PER KODE CUSTOMER (judul sementara, ganti sesuai kebutuhan) ════
-    sec("KASIH JUDUL")
+    sec("OUTSTANDING & COLLECTION BY OUTLET")
     render_customer_detail_table(dff)
 
     # ════ SO BLOCK — 1 TABEL dengan kolom SO Status, Area, Kode Customer, dll ════
@@ -1056,7 +1056,7 @@ def page_otc(filters=None):
                .reset_index().sort_values("Nominal",ascending=False))
         t_kat["%"]=t_kat["Nominal"].apply(lambda v: P(v,tn))
         t_kat["Nominal"]=t_kat["Nominal"].apply(R)
-        t_kat.columns=["Kategori Overdue","Nominal","Jml Faktur","%"]
+        t_kat.columns=["Kategori Overdue","Nominal","Jml Faktur","%OD"]
         st.dataframe(t_kat,use_container_width=True,hide_index=True,height=320)
     dw1,dw2=st.columns(2)
     with dw1: dl_btn(dff.groupby("NAMA AREA").agg(NF=("Nilai Faktur","sum"),Cur=("CURRENT","sum"),Ov=("OVERDUE","sum")).reset_index(),"OUTSTANDING_PER_AREA")
@@ -1295,7 +1295,7 @@ def page_gt(filters=None):
                .reset_index().sort_values("Nominal",ascending=False))
         t_kat["%"]=t_kat["Nominal"].apply(lambda v: P(v,tn))
         t_kat["Nominal"]=t_kat["Nominal"].apply(R)
-        t_kat.columns=["Kategori Overdue","Nominal","Jml Faktur","%"]
+        t_kat.columns=["Kategori Overdue","Nominal","Jml Faktur","%OD"]
         st.dataframe(t_kat,use_container_width=True,hide_index=True,height=320)
     dw1,dw2=st.columns(2)
     with dw1: dl_btn(dff.groupby("Nama Area").agg(NF=("Nilai Faktur","sum"),Cur=("CURRENT","sum"),Ov=("OVERDUE","sum")).reset_index(),"GT_OUTSTANDING_PER_AREA")
