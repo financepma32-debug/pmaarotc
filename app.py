@@ -459,20 +459,21 @@ html, body, [class*="css"]  { font-family: 'Inter', sans-serif; }
 .cust-table td.cust-frz-3, .cust-table th.cust-frz-3 { left: 330px; width: 150px;
     box-shadow: 3px 0 6px -2px rgba(0,0,0,0.12); }
 
-/* ── Tabel detail rekonsiliasi Sampling EO — freeze No..Sisa AR ─── */
-.eo-table-wrap {
-    overflow-x: auto;
-    overflow-y: auto;
+/* ── Tabel detail rekonsiliasi Sampling EO — SPLIT 2 tabel (bukan sticky) ─── */
+/* Kiri = kolom freeze (No..Sisa AR), Kanan = kolom scroll, digabung 1 scroll vertikal bareng */
+.eo-split-wrap {
+    display: flex;
+    align-items: flex-start;
     max-height: 460px;
+    overflow-y: auto;
     border: 1.5px solid #D1D5DB;
     border-radius: 12px;
     margin-bottom: 28px;
-    isolation: isolate;
 }
-.eo-table thead th { position: sticky; top: 0; z-index: 2; }
-.eo-table thead th.eo-frz { z-index: 4; }
-.eo-table { border-collapse: separate; border-spacing: 0; font-size: 12.5px; table-layout: fixed; min-width: 2546px; }
-.eo-table th, .eo-table td {
+.eo-frozen-col { flex: 0 0 auto; }
+.eo-scroll-col { flex: 1 1 auto; overflow-x: auto; min-width: 0; }
+.eo-tbl { border-collapse: collapse; font-size: 12.5px; table-layout: fixed; }
+.eo-tbl th, .eo-tbl td {
     box-sizing: border-box;
     padding: 9px 14px;
     text-align: center;
@@ -482,9 +483,13 @@ html, body, [class*="css"]  { font-family: 'Inter', sans-serif; }
     overflow: hidden;
     text-overflow: ellipsis;
     font-variant-numeric: tabular-nums;
+    height: 40px;
 }
-.eo-table th:last-child, .eo-table td:last-child { border-right: none; }
-.eo-table thead th {
+.eo-tbl th:last-child, .eo-tbl td:last-child { border-right: none; }
+.eo-tbl thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
     font-size: 10.5px;
     font-weight: 600;
     text-transform: uppercase;
@@ -494,31 +499,9 @@ html, body, [class*="css"]  { font-family: 'Inter', sans-serif; }
     border-bottom: 1.5px solid #9CA3AF;
     border-right: 1px solid #D1D5DB;
 }
-.eo-table tbody tr:last-child td { border-bottom: none; }
-.eo-table td.eo-area, .eo-table th.eo-area { text-align: left; font-weight: 600; color: #111827; }
-
-/* Freeze No, Nama Area, ROM, No Faktur, Tanggal Faktur, Nilai Faktur, Sisa AR */
-.eo-table th.eo-frz, .eo-table td.eo-frz {
-    position: sticky;
-    background: #FFFFFF;
-    z-index: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    transform: translateZ(0);
-    -webkit-transform: translateZ(0);
-    will-change: transform;
-    backface-visibility: hidden;
-    contain: paint;
-}
-.eo-table thead th.eo-frz { background: #F9FAFB; z-index: 3; }
-.eo-table td.eo-frz-0, .eo-table th.eo-frz-0 { left: 0px;   width: 46px;  }
-.eo-table td.eo-frz-1, .eo-table th.eo-frz-1 { left: 46px;  width: 170px; }
-.eo-table td.eo-frz-2, .eo-table th.eo-frz-2 { left: 216px; width: 190px; }
-.eo-table td.eo-frz-3, .eo-table th.eo-frz-3 { left: 406px; width: 120px; }
-.eo-table td.eo-frz-4, .eo-table th.eo-frz-4 { left: 526px; width: 120px; }
-.eo-table td.eo-frz-5, .eo-table th.eo-frz-5 { left: 646px; width: 110px; }
-.eo-table td.eo-frz-6, .eo-table th.eo-frz-6 { left: 756px; width: 110px;
-    box-shadow: 3px 0 6px -2px rgba(0,0,0,0.12); }
+.eo-tbl tbody tr:last-child td { border-bottom: none; }
+.eo-tbl td.eo-area, .eo-tbl th.eo-area { text-align: left; font-weight: 600; color: #111827; }
+.eo-frozen-col .eo-tbl { border-right: 1.5px solid #D1D5DB; box-shadow: 3px 0 6px -2px rgba(0,0,0,0.12); }
 </style>
 """, unsafe_allow_html=True)
 
@@ -1065,18 +1048,23 @@ def render_sampling_eo_detail_table(dff):
     d["TGL BAYAR KE FINANCE_f"] = pd.to_datetime(d["TGL BAYAR KE FINANCE"], errors="coerce").dt.strftime("%d/%m/%Y").fillna("")
     d = d.sort_values("Nama Area")
 
-    rows_html = ""
+    frozen_html = ""
+    scroll_html = ""
     for i, row in enumerate(d.itertuples(index=False), start=1):
         r = dict(zip(d.columns, row))
-        rows_html += (
+        frozen_html += (
             "<tr>"
-            f"<td class='eo-frz eo-frz-0'>{i}</td>"
-            f"<td class='eo-frz eo-frz-1 eo-area'>{r['Nama Area']}</td>"
-            f"<td class='eo-frz eo-frz-2'>{r['ASM']}</td>"
-            f"<td class='eo-frz eo-frz-3'>{r['No Faktur']}</td>"
-            f"<td class='eo-frz eo-frz-4'>{r['Tanggal Faktur_f']}</td>"
-            f"<td class='eo-frz eo-frz-5'>{M(r['Nilai Faktur'])}</td>"
-            f"<td class='eo-frz eo-frz-6'>{M(r['Nominal'])}</td>"
+            f"<td>{i}</td>"
+            f"<td class='eo-area'>{r['Nama Area']}</td>"
+            f"<td>{r['ASM']}</td>"
+            f"<td>{r['No Faktur']}</td>"
+            f"<td>{r['Tanggal Faktur_f']}</td>"
+            f"<td>{M(r['Nilai Faktur'])}</td>"
+            f"<td>{M(r['Nominal'])}</td>"
+            "</tr>"
+        )
+        scroll_html += (
+            "<tr>"
             f"<td>{M(r['OVERDUE'])}</td>"
             f"<td>{r['Grouping OS']}</td>"
             f"<td>{r['STATUS KLAIM'] if pd.notna(r['STATUS KLAIM']) else '–'}</td>"
@@ -1091,52 +1079,35 @@ def render_sampling_eo_detail_table(dff):
         )
 
     st.markdown(f"""
-    <div class="eo-table-wrap">
-    <table class="eo-table">
-    <colgroup>
-        <col style="width:46px">
-        <col style="width:170px">
-        <col style="width:190px">
-        <col style="width:120px">
-        <col style="width:120px">
-        <col style="width:110px">
-        <col style="width:110px">
-        <col style="width:100px">
-        <col style="width:150px">
-        <col style="width:200px">
-        <col style="width:110px">
-        <col style="width:230px">
-        <col style="width:230px">
-        <col style="width:130px">
-        <col style="width:230px">
-        <col style="width:160px">
-        <col style="width:140px">
-    </colgroup>
-    <thead>
-    <tr>
-        <th class="eo-frz eo-frz-0">No</th>
-        <th class="eo-frz eo-frz-1">Nama Area</th>
-        <th class="eo-frz eo-frz-2">ROM</th>
-        <th class="eo-frz eo-frz-3">No Faktur</th>
-        <th class="eo-frz eo-frz-4">Tanggal Faktur</th>
-        <th class="eo-frz eo-frz-5">Nilai Faktur</th>
-        <th class="eo-frz eo-frz-6">Sisa AR</th>
-        <th>Overdue</th>
-        <th>Grouping OS</th>
-        <th>Status Klaim</th>
-        <th>Principal</th>
-        <th>No Surkom</th>
-        <th>No DN Area</th>
-        <th>Nilai DN Klaim</th>
-        <th>Kurang Kelengkapan 1</th>
-        <th>Tgl Bayar ke Finance</th>
-        <th>Nominal Bayar</th>
-    </tr>
-    </thead>
-    <tbody>
-    {rows_html}
-    </tbody>
-    </table>
+    <div class="eo-split-wrap">
+        <div class="eo-frozen-col">
+        <table class="eo-tbl">
+        <colgroup>
+            <col style="width:46px"><col style="width:170px"><col style="width:190px">
+            <col style="width:120px"><col style="width:120px"><col style="width:110px"><col style="width:110px">
+        </colgroup>
+        <thead><tr>
+            <th>No</th><th>Nama Area</th><th>ROM</th><th>No Faktur</th>
+            <th>Tanggal Faktur</th><th>Nilai Faktur</th><th>Sisa AR</th>
+        </tr></thead>
+        <tbody>{frozen_html}</tbody>
+        </table>
+        </div>
+        <div class="eo-scroll-col">
+        <table class="eo-tbl">
+        <colgroup>
+            <col style="width:100px"><col style="width:150px"><col style="width:200px"><col style="width:110px">
+            <col style="width:230px"><col style="width:230px"><col style="width:130px">
+            <col style="width:230px"><col style="width:160px"><col style="width:140px">
+        </colgroup>
+        <thead><tr>
+            <th>Overdue</th><th>Grouping OS</th><th>Status Klaim</th><th>Principal</th>
+            <th>No Surkom</th><th>No DN Area</th><th>Nilai DN Klaim</th>
+            <th>Kurang Kelengkapan 1</th><th>Tgl Bayar ke Finance</th><th>Nominal Bayar</th>
+        </tr></thead>
+        <tbody>{scroll_html}</tbody>
+        </table>
+        </div>
     </div>
     """, unsafe_allow_html=True)
     dl_btn(d[needed], "GT_SAMPLING_EO_DETAIL", "Download Detail Faktur")
