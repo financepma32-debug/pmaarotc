@@ -472,6 +472,7 @@ html, body, [class*="css"]  { font-family: 'Inter', sans-serif; }
 .eo-table thead th.eo-frz { z-index: 4; }
 .eo-table { border-collapse: collapse; font-size: 12.5px; }
 .eo-table th, .eo-table td {
+    box-sizing: border-box;
     padding: 9px 14px;
     text-align: center;
     border-bottom: 1px solid #D1D5DB;
