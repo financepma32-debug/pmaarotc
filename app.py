@@ -458,6 +458,58 @@ html, body, [class*="css"]  { font-family: 'Inter', sans-serif; }
 .cust-table td.cust-frz-2, .cust-table th.cust-frz-2 { left: 160px; width: 170px; }
 .cust-table td.cust-frz-3, .cust-table th.cust-frz-3 { left: 330px; width: 150px;
     box-shadow: 3px 0 6px -2px rgba(0,0,0,0.12); }
+
+/* ── Tabel detail rekonsiliasi Sampling EO — freeze No..Sisa AR ─── */
+.eo-table-wrap {
+    overflow-x: auto;
+    overflow-y: auto;
+    max-height: 460px;
+    border: 1.5px solid #D1D5DB;
+    border-radius: 12px;
+    margin-bottom: 28px;
+}
+.eo-table thead th { position: sticky; top: 0; z-index: 2; }
+.eo-table thead th.eo-frz { z-index: 4; }
+.eo-table { width: 100%; min-width: 1700px; table-layout: fixed; border-collapse: collapse; font-size: 12.5px; }
+.eo-table th, .eo-table td {
+    padding: 9px 12px;
+    text-align: center;
+    border-bottom: 1px solid #D1D5DB;
+    border-right: 1px solid #E5E7EB;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-variant-numeric: tabular-nums;
+}
+.eo-table th:last-child, .eo-table td:last-child { border-right: none; }
+.eo-table thead th {
+    font-size: 10.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    color: #6B7280;
+    background: #F3F4F6;
+    border-bottom: 1.5px solid #9CA3AF;
+    border-right: 1px solid #D1D5DB;
+}
+.eo-table tbody tr:last-child td { border-bottom: none; }
+.eo-table td.eo-area, .eo-table th.eo-area { text-align: left; font-weight: 600; color: #111827; }
+
+/* Freeze No, Nama Area, ROM, No Faktur, Tanggal Faktur, Nilai Faktur, Sisa AR */
+.eo-table th.eo-frz, .eo-table td.eo-frz {
+    position: sticky;
+    background: #FFFFFF;
+    z-index: 1;
+}
+.eo-table thead th.eo-frz { background: #F9FAFB; z-index: 3; }
+.eo-table td.eo-frz-0, .eo-table th.eo-frz-0 { left: 0px;   width: 46px;  }
+.eo-table td.eo-frz-1, .eo-table th.eo-frz-1 { left: 46px;  width: 140px; }
+.eo-table td.eo-frz-2, .eo-table th.eo-frz-2 { left: 186px; width: 130px; }
+.eo-table td.eo-frz-3, .eo-table th.eo-frz-3 { left: 316px; width: 130px; }
+.eo-table td.eo-frz-4, .eo-table th.eo-frz-4 { left: 446px; width: 110px; }
+.eo-table td.eo-frz-5, .eo-table th.eo-frz-5 { left: 556px; width: 110px; }
+.eo-table td.eo-frz-6, .eo-table th.eo-frz-6 { left: 666px; width: 110px;
+    box-shadow: 3px 0 6px -2px rgba(0,0,0,0.12); }
 </style>
 """, unsafe_allow_html=True)
 
@@ -979,6 +1031,87 @@ def render_sampling_eo_table(dff):
     </div>
     """, unsafe_allow_html=True)
     dl_btn(g.rename(columns={"qty":"Qty Faktur","sisa_ar":"Nilai Sisa AR","dn_klaim":"Nilai DN Klaim","diff":"DIFF."}), "GT_SAMPLING_EO")
+
+
+# ── DETAIL REKONSILIASI FAKTUR SAMPLING EO (per baris faktur) ──
+def render_sampling_eo_detail_table(dff):
+    needed = ["Nama Area", "ASM", "No Faktur", "Tanggal Faktur", "Nilai Faktur",
+              "Nominal", "OVERDUE", "Grouping OS", "STATUS KLAIM", "PRINCIPAL",
+              "NO SURKOM", "NO DN AREA", "NILAI DN KLAIM", "KURANG KELENGKAPAN 1",
+              "TGL BAYAR KE FINANCE", "NOMINAL BAYAR 2"]
+    missing = [c for c in needed if c not in dff.columns]
+    if missing or dff.empty:
+        st.info(f"Data belum lengkap untuk tabel ini. Kolom hilang: {missing}" if missing else "Data tidak tersedia.")
+        return
+
+    d = dff[dff["Grouping OS"].astype(str).str.upper().str.contains("SAMPLING EO", na=False)].copy()
+    if d.empty:
+        st.info("Tidak ada data Sampling EO Belum/Sudah Diterima.")
+        return
+
+    d["Grouping OS"] = d["Grouping OS"].astype(str).str.upper().apply(
+        lambda x: "BELUM TERIMA" if "BELUM" in x else ("SUDAH TERIMA" if "SUDAH" in x else x)
+    )
+    d["Tanggal Faktur_f"]       = pd.to_datetime(d["Tanggal Faktur"], errors="coerce").dt.strftime("%d/%m/%Y").fillna("")
+    d["TGL BAYAR KE FINANCE_f"] = pd.to_datetime(d["TGL BAYAR KE FINANCE"], errors="coerce").dt.strftime("%d/%m/%Y").fillna("")
+    d = d.sort_values("Nama Area")
+
+    rows_html = ""
+    for i, row in enumerate(d.itertuples(index=False), start=1):
+        r = dict(zip(d.columns, row))
+        rows_html += (
+            "<tr>"
+            f"<td class='eo-frz eo-frz-0'>{i}</td>"
+            f"<td class='eo-frz eo-frz-1 eo-area'>{r['Nama Area']}</td>"
+            f"<td class='eo-frz eo-frz-2'>{r['ASM']}</td>"
+            f"<td class='eo-frz eo-frz-3'>{r['No Faktur']}</td>"
+            f"<td class='eo-frz eo-frz-4'>{r['Tanggal Faktur_f']}</td>"
+            f"<td class='eo-frz eo-frz-5'>{M(r['Nilai Faktur'])}</td>"
+            f"<td class='eo-frz eo-frz-6'>{M(r['Nominal'])}</td>"
+            f"<td>{M(r['OVERDUE'])}</td>"
+            f"<td>{r['Grouping OS']}</td>"
+            f"<td>{r['STATUS KLAIM'] if pd.notna(r['STATUS KLAIM']) else '–'}</td>"
+            f"<td>{r['PRINCIPAL'] if pd.notna(r['PRINCIPAL']) else '–'}</td>"
+            f"<td>{r['NO SURKOM'] if pd.notna(r['NO SURKOM']) else '–'}</td>"
+            f"<td>{r['NO DN AREA'] if pd.notna(r['NO DN AREA']) else '–'}</td>"
+            f"<td>{M(r['NILAI DN KLAIM'])}</td>"
+            f"<td>{r['KURANG KELENGKAPAN 1'] if pd.notna(r['KURANG KELENGKAPAN 1']) else '–'}</td>"
+            f"<td>{r['TGL BAYAR KE FINANCE_f']}</td>"
+            f"<td>{M(r['NOMINAL BAYAR 2'])}</td>"
+            "</tr>"
+        )
+
+    st.markdown(f"""
+    <div class="eo-table-wrap">
+    <table class="eo-table">
+    <thead>
+    <tr>
+        <th class="eo-frz eo-frz-0">No</th>
+        <th class="eo-frz eo-frz-1">Nama Area</th>
+        <th class="eo-frz eo-frz-2">ROM</th>
+        <th class="eo-frz eo-frz-3">No Faktur</th>
+        <th class="eo-frz eo-frz-4">Tanggal Faktur</th>
+        <th class="eo-frz eo-frz-5">Nilai Faktur</th>
+        <th class="eo-frz eo-frz-6">Sisa AR</th>
+        <th>Overdue</th>
+        <th>Grouping OS</th>
+        <th>Status Klaim</th>
+        <th>Principal</th>
+        <th>No Surkom</th>
+        <th>No DN Area</th>
+        <th>Nilai DN Klaim</th>
+        <th>Kurang Kelengkapan 1</th>
+        <th>Tgl Bayar ke Finance</th>
+        <th>Nominal Bayar</th>
+    </tr>
+    </thead>
+    <tbody>
+    {rows_html}
+    </tbody>
+    </table>
+    </div>
+    """, unsafe_allow_html=True)
+    dl_btn(d[needed], "GT_SAMPLING_EO_DETAIL", "Download Detail Faktur")
 
 
 def render_customer_detail_table(dff):
@@ -1543,6 +1676,9 @@ def page_gt(filters=None):
     # ════ SAMPLING EO — BELUM/SUDAH DITERIMA ════
     sec("SAMPLING EO — BELUM & SUDAH DITERIMA")
     render_sampling_eo_table(dff)
+
+    sec("Detail Rekonsiliasi Faktur Sampling EO (Status Terima dan blm Terima")
+    render_sampling_eo_detail_table(dff)
 
     # ════ OUTLET & RBM ════
     sec("BREAKDOWN JENIS OUTLET & RBM")
