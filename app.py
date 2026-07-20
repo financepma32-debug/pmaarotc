@@ -578,7 +578,7 @@ GT_ALL_COLS = [
     "ACTUAL PELUNASAN","TARGET PELUNASAN","DUE DATE","Qty Faktur",
     "NILAI DN KLAIM","NO SURKOM","NO DN AREA","KURANG KELENGKAPAN 1",
     "TGL BAYAR KE FINANCE","NOMINAL BAYAR 2","NO PO","NO SURAT JALAN",
-    "DEADLINE","PJ/PIC","PELAKU",
+    "DEADLINE","PJ/PIC","PELAKU","STATUS KLAIM","PRINCIPAL",
 ]
 
 # ── FORMAT ───────────────────────────────────────────────────────────────────
