@@ -570,7 +570,7 @@ GT_ALL_COLS = [
     "ACTUAL PELUNASAN","TARGET PELUNASAN","DUE DATE","Qty Faktur",
     "NILAI DN KLAIM","NO SURKOM","NO DN AREA","KURANG KELENGKAPAN 1",
     "TGL BAYAR KE FINANCE","NOMINAL BAYAR 2","NO PO","NO SURAT JALAN",
-    "DEADLINE","PJ/PIC","PELAKU","STATUS KLAIM","PRINCIPAL",
+    "DEADLINE","PJ/PIC","PELAKU","STATUS KLAIM","PRINCIPAL","Kode Customer",
 ]
 
 # ── FORMAT ───────────────────────────────────────────────────────────────────
@@ -1702,14 +1702,16 @@ def page_gt(filters=None):
     # ════ DETAIL FAKTUR ════
     ovrd_ct=int((dff["OVERDUE?"]>0).sum())
     sec(f"DETAIL FAKTUR — {D(ovrd_ct)} FAKTUR OVERDUE")
-    COLS=["Nama Area","RBM","ASM","Nama Sales","Nama Toko","No Faktur","Tanggal Faktur","Tanggal JT","Nilai Faktur","Nominal","Saldo Akhir","KELOMPOK","OVERDUE?","Grouping OS"]
+    COLS=["Nama Area","RBM","Kode Customer","Nama Toko","No Faktur","Tanggal Faktur","Tanggal JT",
+          "Nilai Faktur","Nominal","KELOMPOK","Grouping OS","NO PO","NO SURAT JALAN","KRONOLOGI",
+          "ACTION PLAN","DEADLINE","PJ/PIC","NO BA","JENIS BA","JENIS KASUS","PELAKU","PENYELESAIAN"]
     cols_ok=[c for c in COLS if c in dff.columns]
     tbl=dff[cols_ok].copy()
     if "Tanggal Faktur" in tbl.columns: tbl["Tanggal Faktur"]=tbl["Tanggal Faktur"].dt.strftime("%d %b %Y")
     if "Tanggal JT" in tbl.columns: tbl["Tanggal JT"]=tbl["Tanggal JT"].dt.strftime("%d %b %Y")
-    for c in ["Nilai Faktur","Saldo Akhir"]:
+    for c in ["Nilai Faktur","Nominal"]:
         if c in tbl.columns: tbl[c]=tbl[c].apply(R)
-    tbl.rename(columns={"Nama Area":"Nama Area","Nama Sales":"Nama Sales","Nama Toko":"Nama Toko","Saldo Akhir":"Sisa AR","OVERDUE?":"Hari OD","KELOMPOK":"Kelompok","Grouping OS":"Grouping OS"},inplace=True)
+    tbl.rename(columns={"Nominal":"Sisa AR","KELOMPOK":"Kelompok"},inplace=True)
     tbl.insert(0,"#",range(1,len(tbl)+1))
     with st.expander(f"Tampilkan {D(len(tbl))} baris · OS Total: {M(tn)}",expanded=False):
         st.dataframe(tbl,use_container_width=True,hide_index=True,height=440)
