@@ -471,7 +471,7 @@ html, body, [class*="css"]  { font-family: 'Inter', sans-serif; }
 }
 .eo-table thead th { position: sticky; top: 0; z-index: 2; }
 .eo-table thead th.eo-frz { z-index: 4; }
-.eo-table { border-collapse: separate; border-spacing: 0; font-size: 12.5px; }
+.eo-table { border-collapse: separate; border-spacing: 0; font-size: 12.5px; table-layout: fixed; min-width: 2546px; }
 .eo-table th, .eo-table td {
     box-sizing: border-box;
     padding: 9px 14px;
@@ -479,6 +479,8 @@ html, body, [class*="css"]  { font-family: 'Inter', sans-serif; }
     border-bottom: 1px solid #D1D5DB;
     border-right: 1px solid #E5E7EB;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     font-variant-numeric: tabular-nums;
 }
 .eo-table th:last-child, .eo-table td:last-child { border-right: none; }
@@ -505,12 +507,12 @@ html, body, [class*="css"]  { font-family: 'Inter', sans-serif; }
 }
 .eo-table thead th.eo-frz { background: #F9FAFB; z-index: 3; }
 .eo-table td.eo-frz-0, .eo-table th.eo-frz-0 { left: 0px;   width: 46px;  }
-.eo-table td.eo-frz-1, .eo-table th.eo-frz-1 { left: 46px;  width: 180px; }
-.eo-table td.eo-frz-2, .eo-table th.eo-frz-2 { left: 226px; width: 200px; }
-.eo-table td.eo-frz-3, .eo-table th.eo-frz-3 { left: 426px; width: 130px; }
-.eo-table td.eo-frz-4, .eo-table th.eo-frz-4 { left: 556px; width: 130px; }
-.eo-table td.eo-frz-5, .eo-table th.eo-frz-5 { left: 686px; width: 120px; }
-.eo-table td.eo-frz-6, .eo-table th.eo-frz-6 { left: 806px; width: 120px;
+.eo-table td.eo-frz-1, .eo-table th.eo-frz-1 { left: 46px;  width: 170px; }
+.eo-table td.eo-frz-2, .eo-table th.eo-frz-2 { left: 216px; width: 190px; }
+.eo-table td.eo-frz-3, .eo-table th.eo-frz-3 { left: 406px; width: 120px; }
+.eo-table td.eo-frz-4, .eo-table th.eo-frz-4 { left: 526px; width: 120px; }
+.eo-table td.eo-frz-5, .eo-table th.eo-frz-5 { left: 646px; width: 110px; }
+.eo-table td.eo-frz-6, .eo-table th.eo-frz-6 { left: 756px; width: 110px;
     box-shadow: 3px 0 6px -2px rgba(0,0,0,0.12); }
 </style>
 """, unsafe_allow_html=True)
@@ -1086,6 +1088,25 @@ def render_sampling_eo_detail_table(dff):
     st.markdown(f"""
     <div class="eo-table-wrap">
     <table class="eo-table">
+    <colgroup>
+        <col style="width:46px">
+        <col style="width:170px">
+        <col style="width:190px">
+        <col style="width:120px">
+        <col style="width:120px">
+        <col style="width:110px">
+        <col style="width:110px">
+        <col style="width:100px">
+        <col style="width:150px">
+        <col style="width:200px">
+        <col style="width:110px">
+        <col style="width:230px">
+        <col style="width:230px">
+        <col style="width:130px">
+        <col style="width:230px">
+        <col style="width:160px">
+        <col style="width:140px">
+    </colgroup>
     <thead>
     <tr>
         <th class="eo-frz eo-frz-0">No</th>
