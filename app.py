@@ -504,6 +504,11 @@ html, body, [class*="css"]  { font-family: 'Inter', sans-serif; }
     z-index: 1;
     overflow: hidden;
     text-overflow: ellipsis;
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    will-change: transform;
+    backface-visibility: hidden;
+    contain: paint;
 }
 .eo-table thead th.eo-frz { background: #F9FAFB; z-index: 3; }
 .eo-table td.eo-frz-0, .eo-table th.eo-frz-0 { left: 0px;   width: 46px;  }
