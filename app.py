@@ -465,14 +465,14 @@ html, body, [class*="css"]  { font-family: 'Inter', sans-serif; }
     display: flex;
     align-items: flex-start;
     max-height: 460px;
-    overflow-y: auto;
+    overflow: auto;
     border: 1.5px solid #D1D5DB;
     border-radius: 12px;
     margin-bottom: 28px;
 }
-.eo-frozen-col { flex: 0 0 auto; }
-.eo-scroll-col { flex: 1 1 auto; overflow-x: auto; overflow-y: visible; min-width: 0; }
-.eo-tbl { border-collapse: collapse; font-size: 12.5px; table-layout: fixed; width: max-content; }
+.eo-frozen-col { flex: 0 0 auto; position: sticky; left: 0; z-index: 5; background: #FFFFFF; }
+.eo-scroll-col { flex: 0 0 auto; }
+.eo-tbl { border-collapse: collapse; font-size: 12.5px; table-layout: fixed; }
 .eo-tbl th, .eo-tbl td {
     box-sizing: border-box;
     padding: 9px 14px;
@@ -1081,7 +1081,7 @@ def render_sampling_eo_detail_table(dff):
     st.markdown(f"""
     <div class="eo-split-wrap">
         <div class="eo-frozen-col">
-        <table class="eo-tbl">
+        <table class="eo-tbl" style="width:796px;">
         <colgroup>
             <col style="width:46px"><col style="width:145px"><col style="width:145px">
             <col style="width:120px"><col style="width:120px"><col style="width:110px"><col style="width:110px">
@@ -1094,7 +1094,7 @@ def render_sampling_eo_detail_table(dff):
         </table>
         </div>
         <div class="eo-scroll-col">
-        <table class="eo-tbl">
+        <table class="eo-tbl" style="width:1680px;">
         <colgroup>
             <col style="width:100px"><col style="width:150px"><col style="width:200px"><col style="width:110px">
             <col style="width:230px"><col style="width:230px"><col style="width:130px">
