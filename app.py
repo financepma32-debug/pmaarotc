@@ -470,15 +470,13 @@ html, body, [class*="css"]  { font-family: 'Inter', sans-serif; }
 }
 .eo-table thead th { position: sticky; top: 0; z-index: 2; }
 .eo-table thead th.eo-frz { z-index: 4; }
-.eo-table { width: 100%; min-width: 1700px; table-layout: fixed; border-collapse: collapse; font-size: 12.5px; }
+.eo-table { border-collapse: collapse; font-size: 12.5px; }
 .eo-table th, .eo-table td {
-    padding: 9px 12px;
+    padding: 9px 14px;
     text-align: center;
     border-bottom: 1px solid #D1D5DB;
     border-right: 1px solid #E5E7EB;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
     font-variant-numeric: tabular-nums;
 }
 .eo-table th:last-child, .eo-table td:last-child { border-right: none; }
@@ -500,15 +498,17 @@ html, body, [class*="css"]  { font-family: 'Inter', sans-serif; }
     position: sticky;
     background: #FFFFFF;
     z-index: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 .eo-table thead th.eo-frz { background: #F9FAFB; z-index: 3; }
 .eo-table td.eo-frz-0, .eo-table th.eo-frz-0 { left: 0px;   width: 46px;  }
-.eo-table td.eo-frz-1, .eo-table th.eo-frz-1 { left: 46px;  width: 140px; }
-.eo-table td.eo-frz-2, .eo-table th.eo-frz-2 { left: 186px; width: 130px; }
-.eo-table td.eo-frz-3, .eo-table th.eo-frz-3 { left: 316px; width: 130px; }
-.eo-table td.eo-frz-4, .eo-table th.eo-frz-4 { left: 446px; width: 110px; }
-.eo-table td.eo-frz-5, .eo-table th.eo-frz-5 { left: 556px; width: 110px; }
-.eo-table td.eo-frz-6, .eo-table th.eo-frz-6 { left: 666px; width: 110px;
+.eo-table td.eo-frz-1, .eo-table th.eo-frz-1 { left: 46px;  width: 180px; }
+.eo-table td.eo-frz-2, .eo-table th.eo-frz-2 { left: 226px; width: 200px; }
+.eo-table td.eo-frz-3, .eo-table th.eo-frz-3 { left: 426px; width: 130px; }
+.eo-table td.eo-frz-4, .eo-table th.eo-frz-4 { left: 556px; width: 130px; }
+.eo-table td.eo-frz-5, .eo-table th.eo-frz-5 { left: 686px; width: 120px; }
+.eo-table td.eo-frz-6, .eo-table th.eo-frz-6 { left: 806px; width: 120px;
     box-shadow: 3px 0 6px -2px rgba(0,0,0,0.12); }
 </style>
 """, unsafe_allow_html=True)
