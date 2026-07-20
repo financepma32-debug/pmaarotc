@@ -1113,6 +1113,55 @@ def render_sampling_eo_detail_table(dff):
     dl_btn(d[needed], "GT_SAMPLING_EO_DETAIL", "Download Detail Faktur")
 
 
+# ── Split-table Detail Faktur GT — freeze #, Nama Area, RBM, Kode Customer, Nama Toko ──
+def render_gt_detail_faktur_split(tbl):
+    frz_cols   = [c for c in ["#","Nama Area","RBM","Kode Customer","Nama Toko"] if c in tbl.columns]
+    scroll_cols = [c for c in tbl.columns if c not in frz_cols]
+
+    frz_widths = {"#":46,"Nama Area":150,"RBM":150,"Kode Customer":120,"Nama Toko":180}
+    scr_widths = {"No Faktur":120,"Tanggal Faktur":110,"Tanggal JT":110,"Nilai Faktur":110,"Sisa AR":110,
+                  "Kelompok":90,"Grouping OS":150,"NO PO":120,"NO SURAT JALAN":150,"KRONOLOGI":200,
+                  "ACTION PLAN":200,"DEADLINE":110,"PJ/PIC":110,"NO BA":110,"JENIS BA":120,
+                  "JENIS KASUS":150,"PELAKU":120,"PENYELESAIAN":200}
+
+    frz_w = [frz_widths.get(c,120) for c in frz_cols]
+    scr_w = [scr_widths.get(c,130) for c in scroll_cols]
+
+    frozen_html, scroll_html = "", ""
+    for row in tbl.itertuples(index=False):
+        r = dict(zip(tbl.columns, row))
+        frozen_html += "<tr>" + "".join(
+            f"<td class='eo-area'>{r[c]}</td>" if c=="Nama Area" else f"<td>{r[c]}</td>" for c in frz_cols
+        ) + "</tr>"
+        scroll_html += "<tr>" + "".join(f"<td>{r[c] if pd.notna(r[c]) else '–'}</td>" for c in scroll_cols) + "</tr>"
+
+    frz_colgroup = "".join(f'<col style="width:{w}px">' for w in frz_w)
+    scr_colgroup = "".join(f'<col style="width:{w}px">' for w in scr_w)
+    frz_head = "".join(f"<th>{c}</th>" for c in frz_cols)
+    scr_head = "".join(f"<th>{c}</th>" for c in scroll_cols)
+    frz_total = sum(frz_w)
+    scr_total = sum(scr_w)
+
+    st.markdown(f"""
+    <div class="eo-split-wrap">
+        <div class="eo-frozen-col">
+        <table class="eo-tbl" style="width:{frz_total}px;">
+        <colgroup>{frz_colgroup}</colgroup>
+        <thead><tr>{frz_head}</tr></thead>
+        <tbody>{frozen_html}</tbody>
+        </table>
+        </div>
+        <div class="eo-scroll-col">
+        <table class="eo-tbl" style="width:{scr_total}px;">
+        <colgroup>{scr_colgroup}</colgroup>
+        <thead><tr>{scr_head}</tr></thead>
+        <tbody>{scroll_html}</tbody>
+        </table>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+
 def render_customer_detail_table(dff):
     """Tabel detail per Kode Customer/Outlet — di bawah ranking RBM/KAM."""
     needed = ["Kode Customer","NAMA TOKO","JENIS OUTLET","RBM","ASM"]
@@ -1714,7 +1763,7 @@ def page_gt(filters=None):
     tbl.rename(columns={"Nominal":"Sisa AR","KELOMPOK":"Kelompok"},inplace=True)
     tbl.insert(0,"#",range(1,len(tbl)+1))
     with st.expander(f"Tampilkan {D(len(tbl))} baris · OS Total: {M(tn)}",expanded=False):
-        st.dataframe(tbl,use_container_width=True,hide_index=True,height=440)
+        render_gt_detail_faktur_split(tbl)
         dl_btn(dff[cols_ok],"GT_DETAIL","Download Detail Faktur GT")
 
 # ════════════════════════════════════════════════════════════════════
