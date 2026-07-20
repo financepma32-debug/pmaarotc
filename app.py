@@ -1661,9 +1661,17 @@ def page_gt(filters=None):
         plot_base(fig_h, h=300); fig_h.update_layout(xaxis_tickformat=",")
         st.plotly_chart(fig_h, use_container_width=True)
     with cb2:
-        pl=[b for b in BUCKETS if bv[b]>0]
-        pv=[bv[b] for b in BUCKETS if bv[b]>0]
-        pc=[BUCKET_COLOR[b] for b in BUCKETS if bv[b]>0]
+        area_os = (dff[dff["Nominal"]>0].groupby("Nama Area")["Nominal"]
+                   .sum().sort_values(ascending=False))
+        top10 = area_os.head(10)
+        rest = area_os.iloc[10:].sum()
+        pl = top10.index.tolist()
+        pv = top10.values.tolist()
+        pc = CHART_PALETTE[:len(pl)]
+        if rest > 0:
+            pl.append("Lainnya")
+            pv.append(rest)
+            pc.append("#9E9E9E")
         fig_pie = go.Figure(go.Pie(labels=pl,values=pv,marker_colors=pc,hole=0.55,
             textinfo="percent",textfont_size=11,
             hovertemplate="%{label}: %{value:,.0f}<extra></extra>"))
@@ -1942,11 +1950,20 @@ def page_rdi(filters=None):
             plot_base(fig_h,h=300); fig_h.update_layout(xaxis_tickformat=",")
             st.plotly_chart(fig_h,use_container_width=True)
     with cb2:
-        pl=[b for b in BUCKETS if bv[b]>0]
-        pv=[bv[b] for b in BUCKETS if bv[b]>0]
-        pc=[BUCKET_COLOR[b] for b in BUCKETS if bv[b]>0]
+        area_os = (dff[dff["Nominal"]>0].groupby("Nama Area")["Nominal"]
+                   .sum().sort_values(ascending=False))
+        top10 = area_os.head(10)
+        rest = area_os.iloc[10:].sum()
+        pl = top10.index.tolist()
+        pv = top10.values.tolist()
+        pc = CHART_PALETTE[:len(pl)]
+        if rest > 0:
+            pl.append("Lainnya")
+            pv.append(rest)
+            pc.append("#9E9E9E")
         fig_pie=go.Figure(go.Pie(labels=pl,values=pv,marker_colors=pc,hole=0.55,
-            textinfo="percent",textfont_size=11))
+            textinfo="percent",textfont_size=11,
+            hovertemplate="%{label}: %{value:,.0f}<extra></extra>"))
         fig_pie.update_layout(paper_bgcolor="rgba(0,0,0,0)",plot_bgcolor="rgba(0,0,0,0)",
             height=300,margin=dict(t=12,b=12,l=0,r=0),showlegend=True,
             legend=dict(font_size=10,x=1.01,y=0.5,xanchor="left"),
