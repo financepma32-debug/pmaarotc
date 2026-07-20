@@ -400,7 +400,9 @@ html, body, [class*="css"]  { font-family: 'Inter', sans-serif; }
 
 /* Varian scroll — tampilin ~10 baris, sisanya scroll di dalam box */
 .rbm-table-wrap.scroll-box { max-height: 470px; overflow-y: auto; }
-.rbm-table-wrap.scroll-box .rbm-table thead th { position: sticky; top: 0; z-index: 2; }
+.rbm-table-wrap.scroll-box .rbm-table thead th { position: sticky; z-index: 2; height: 36px; box-sizing: border-box; }
+.rbm-table-wrap.scroll-box .rbm-table thead tr:first-child th { top: 0; z-index: 3; }
+.rbm-table-wrap.scroll-box .rbm-table thead tr:last-child th  { top: 36px; z-index: 2; }
 
 /* ── Tabel detail per Kode Customer — kolom beku (freeze) ─── */
 .cust-table-wrap {
