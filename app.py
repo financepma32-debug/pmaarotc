@@ -919,6 +919,68 @@ def render_rbm_kam_table(dff):
     """, unsafe_allow_html=True)
 
 
+# ── SAMPLING EO — Nama Area x Grouping OS (khusus Sampling EO Belum/Sudah Diterima) ──
+def render_sampling_eo_table(dff):
+    needed = ["Nama Area", "Grouping OS", "Nominal", "NILAI DN KLAIM", "No Faktur"]
+    if not all(c in dff.columns for c in needed) or dff.empty:
+        st.info("Data Sampling EO tidak tersedia.")
+        return
+
+    d = dff[dff["Grouping OS"].astype(str).str.upper().str.contains("SAMPLING EO", na=False)].copy()
+    if d.empty:
+        st.info("Tidak ada data Sampling EO Belum/Sudah Diterima.")
+        return
+
+    d["Grouping OS"] = d["Grouping OS"].astype(str).str.upper().apply(
+        lambda x: "BELUM TERIMA" if "BELUM" in x else ("SUDAH TERIMA" if "SUDAH" in x else x)
+    )
+
+    g = d.groupby(["Nama Area", "Grouping OS"], dropna=False).agg(
+        qty=("No Faktur", "count"),
+        sisa_ar=("Nominal", "sum"),
+        dn_klaim=("NILAI DN KLAIM", "sum"),
+    ).reset_index()
+    g["diff"] = g["dn_klaim"] - g["sisa_ar"]
+    g = g.sort_values(["Nama Area", "Grouping OS"])
+
+    rows_html = ""
+    for i, row in enumerate(g.itertuples(index=False), start=1):
+        r = dict(zip(g.columns, row))
+        rows_html += (
+            "<tr>"
+            f"<td>{i}</td>"
+            f"<td>{r['Nama Area']}</td>"
+            f"<td>{r['Grouping OS']}</td>"
+            f"<td>{D(int(r['qty']))}</td>"
+            f"<td>{M(r['sisa_ar'])}</td>"
+            f"<td>{M(r['dn_klaim'])}</td>"
+            f"<td>{M(r['diff'])}</td>"
+            "</tr>"
+        )
+
+    st.markdown(f"""
+    <div class="rbm-table-wrap scroll-box">
+    <table class="rbm-table">
+    <thead>
+    <tr>
+        <th>No</th>
+        <th>Nama Area</th>
+        <th>Grouping OS</th>
+        <th>Qty Faktur</th>
+        <th>Nilai Sisa AR</th>
+        <th>Nilai DN Klaim</th>
+        <th>DIFF.</th>
+    </tr>
+    </thead>
+    <tbody>
+    {rows_html}
+    </tbody>
+    </table>
+    </div>
+    """, unsafe_allow_html=True)
+    dl_btn(g.rename(columns={"qty":"Qty Faktur","sisa_ar":"Nilai Sisa AR","dn_klaim":"Nilai DN Klaim","diff":"DIFF."}), "GT_SAMPLING_EO")
+
+
 def render_customer_detail_table(dff):
     """Tabel detail per Kode Customer/Outlet — di bawah ranking RBM/KAM."""
     needed = ["Kode Customer","NAMA TOKO","JENIS OUTLET","RBM","ASM"]
@@ -1477,6 +1539,10 @@ def page_gt(filters=None):
     dc1,dc2=st.columns(2)
     with dc1: dl_btn(dff.groupby("Nama Area").agg(Actual=("ACTUAL PELUNASAN","sum"),Target=("TARGET PELUNASAN","sum")).reset_index(),"GT_COLLECTION_PER_AREA")
     with dc2: dl_btn(dff.groupby("ASM").agg(Actual=("ACTUAL PELUNASAN","sum"),Target=("TARGET PELUNASAN","sum"),OS=("Nominal","sum")).reset_index(),"GT_COLLECTION_PER_ASM")
+
+    # ════ SAMPLING EO — BELUM/SUDAH DITERIMA ════
+    sec("SAMPLING EO — BELUM & SUDAH DITERIMA")
+    render_sampling_eo_table(dff)
 
     # ════ OUTLET & RBM ════
     sec("BREAKDOWN JENIS OUTLET & RBM")
