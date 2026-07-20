@@ -1083,7 +1083,7 @@ def render_sampling_eo_detail_table(dff):
         <div class="eo-frozen-col">
         <table class="eo-tbl">
         <colgroup>
-            <col style="width:46px"><col style="width:170px"><col style="width:190px">
+            <col style="width:46px"><col style="width:150px"><col style="width:150px">
             <col style="width:120px"><col style="width:120px"><col style="width:110px"><col style="width:110px">
         </colgroup>
         <thead><tr>
