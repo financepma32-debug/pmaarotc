@@ -467,10 +467,11 @@ html, body, [class*="css"]  { font-family: 'Inter', sans-serif; }
     border: 1.5px solid #D1D5DB;
     border-radius: 12px;
     margin-bottom: 28px;
+    isolation: isolate;
 }
 .eo-table thead th { position: sticky; top: 0; z-index: 2; }
 .eo-table thead th.eo-frz { z-index: 4; }
-.eo-table { border-collapse: collapse; font-size: 12.5px; }
+.eo-table { border-collapse: separate; border-spacing: 0; font-size: 12.5px; }
 .eo-table th, .eo-table td {
     box-sizing: border-box;
     padding: 9px 14px;
