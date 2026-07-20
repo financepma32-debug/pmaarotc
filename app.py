@@ -471,8 +471,8 @@ html, body, [class*="css"]  { font-family: 'Inter', sans-serif; }
     margin-bottom: 28px;
 }
 .eo-frozen-col { flex: 0 0 auto; }
-.eo-scroll-col { flex: 1 1 auto; overflow-x: auto; min-width: 0; }
-.eo-tbl { border-collapse: collapse; font-size: 12.5px; table-layout: fixed; }
+.eo-scroll-col { flex: 1 1 auto; overflow-x: auto; overflow-y: visible; min-width: 0; }
+.eo-tbl { border-collapse: collapse; font-size: 12.5px; table-layout: fixed; width: max-content; }
 .eo-tbl th, .eo-tbl td {
     box-sizing: border-box;
     padding: 9px 14px;
@@ -1083,7 +1083,7 @@ def render_sampling_eo_detail_table(dff):
         <div class="eo-frozen-col">
         <table class="eo-tbl">
         <colgroup>
-            <col style="width:46px"><col style="width:150px"><col style="width:150px">
+            <col style="width:46px"><col style="width:145px"><col style="width:145px">
             <col style="width:120px"><col style="width:120px"><col style="width:110px"><col style="width:110px">
         </colgroup>
         <thead><tr>
