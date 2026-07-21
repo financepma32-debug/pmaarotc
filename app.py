@@ -2044,7 +2044,7 @@ def load_users() -> dict:
     """Ambil daftar user dari tabel app_users di Supabase."""
     try:
         sb   = get_sb()
-        resp = sb.table("app_users").select("nik,nama,password").execute()
+        resp = sb.table("app_users").select("nik,nama,password,akses_proyek").execute()
         return {r["nik"]: r for r in (resp.data or [])}
     except Exception:
         return {}
@@ -2136,9 +2136,15 @@ def check_login() -> bool:
                                 unsafe_allow_html=True)
                 else:
                     user = users[nik.strip()]
+                    akses_raw = (user.get("akses_proyek") or "").strip()
+                    if akses_raw.upper() == "ALL":
+                        akses = "ALL"
+                    else:
+                        akses = [a.strip() for a in akses_raw.split(",") if a.strip()]
                     st.session_state["logged_in"]   = True
                     st.session_state["user_nik"]    = nik.strip()
                     st.session_state["user_nama"]   = user["nama"]
+                    st.session_state["user_akses"]  = akses
                     st.rerun()
 
     return False
@@ -2183,7 +2189,7 @@ def render_change_password():
                     # Otomatis logout setelah 2 detik agar user login dengan password baru
                     import time as _time
                     _time.sleep(1.5)
-                    for k in ["logged_in","user_nik","user_nama"]:
+                    for k in ["logged_in","user_nik","user_nama","user_akses"]:
                         st.session_state.pop(k, None)
                     st.rerun()
                 except Exception as e:
@@ -2224,18 +2230,24 @@ def render_project_picker():
     """, unsafe_allow_html=True)
 
     cols = st.columns(3)
+    akses = st.session_state.get("user_akses", [])
     for i, p in enumerate(PROJECTS):
+        boleh_akses = (akses == "ALL") or (p["key"] in akses)
+        card_aktif = p["active"] and boleh_akses
+        subtitle = p["subtitle"] if p["active"] else p["subtitle"]
+        if p["active"] and not boleh_akses:
+            subtitle = "Tidak ada akses"
         with cols[i % 3]:
             st.markdown(f"""
             <div style='border:1px solid #ECECEC;border-radius:16px;padding:20px;
                         min-height:120px;margin-bottom:12px;
-                        background:{"#FFFFFF" if p["active"] else "#FAFAFA"};
-                        opacity:{"1" if p["active"] else "0.55"}'>
+                        background:{"#FFFFFF" if card_aktif else "#FAFAFA"};
+                        opacity:{"1" if card_aktif else "0.55"}'>
                 <div style='font-size:15px;font-weight:600;color:#111827'>{p["title"]}</div>
-                <div style='font-size:12px;color:#9CA3AF;margin-top:6px'>{p["subtitle"]}</div>
+                <div style='font-size:12px;color:#9CA3AF;margin-top:6px'>{subtitle}</div>
             </div>
             """, unsafe_allow_html=True)
-            if p["active"]:
+            if card_aktif:
                 if st.button("Buka", key=f"open_{p['key']}", use_container_width=True):
                     st.session_state["active_project"] = p["key"]
                     st.rerun()
@@ -2248,7 +2260,7 @@ def render_project_picker():
             "text-transform:uppercase;letter-spacing:.8px;padding:4px 0 8px'>Akun</div>",
             unsafe_allow_html=True)
         if st.button("Keluar", use_container_width=True, key="logout_btn_picker"):
-            for k in ["logged_in","user_nik","user_nama","preloaded","active_project"]:
+            for k in ["logged_in","user_nik","user_nama","user_akses","preloaded","active_project"]:
                 st.session_state.pop(k, None)
             st.rerun()
 
@@ -2291,7 +2303,7 @@ def main():
                 st.rerun()
         with c_out:
             if st.button("Keluar", use_container_width=True, key="logout_btn"):
-                for k in ["logged_in","user_nik","user_nama","preloaded","active_project"]:
+                for k in ["logged_in","user_nik","user_nama","user_akses","preloaded","active_project"]:
                     st.session_state.pop(k, None)
                 st.rerun()
         st.markdown("<hr style='margin:8px 0;border-color:#ECECEC'>", unsafe_allow_html=True)
