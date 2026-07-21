@@ -413,8 +413,11 @@ html, body, [class*="css"]  { font-family: 'Inter', sans-serif; }
     border-radius: 12px;
     margin-bottom: 28px;
 }
-.cust-table thead th { position: sticky; top: 0; z-index: 2; }
-.cust-table thead th.cust-frz { z-index: 4; }
+.cust-table thead th { position: sticky; z-index: 2; height: 36px; box-sizing: border-box; }
+.cust-table thead tr:first-child th { top: 0; z-index: 3; }
+.cust-table thead tr:last-child th  { top: 36px; z-index: 2; }
+.cust-table thead th.cust-frz { z-index: 5; }
+.cust-table thead tr:first-child th.cust-frz { z-index: 6; }
 .cust-table { width: 100%; min-width: 1410px; table-layout: fixed; border-collapse: collapse; font-size: 12.5px; }
 .cust-table th, .cust-table td {
     padding: 9px 12px;
