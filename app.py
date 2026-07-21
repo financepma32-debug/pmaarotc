@@ -2243,21 +2243,11 @@ def render_project_picker():
     nama = st.session_state.get("user_nama", "")
 
     st.markdown(f"""
-    <style>
-    .pp-logo-bg {{
-        position: fixed !important;
-        top: 50% !important;
-        left: 50% !important;
-        transform: translate(-50%, -50%) !important;
-        width: 1200px !important;
-        max-width: 95vw !important;
-        height: auto !important;
-        opacity: 0.07 !important;
-        z-index: 0 !important;
-        pointer-events: none !important;
-    }}
-    </style>
-    <img class="pp-logo-bg" src="data:image/png;base64,{LOGO_B64}">
+    <img src="data:image/png;base64,{LOGO_B64}"
+         style="position:fixed !important; top:50% !important; left:50% !important;
+                transform:translate(-50%,-50%) !important; width:1800px !important;
+                max-width:98vw !important; height:auto !important; opacity:0.09 !important;
+                z-index:0 !important; pointer-events:none !important;">
     """, unsafe_allow_html=True)
 
     st.markdown("""
