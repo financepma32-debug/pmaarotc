@@ -2233,21 +2233,18 @@ def render_project_picker():
     akses = st.session_state.get("user_akses", [])
     for i, p in enumerate(PROJECTS):
         boleh_akses = (akses == "ALL") or (p["key"] in akses)
-        card_aktif = p["active"] and boleh_akses
-        subtitle = p["subtitle"] if p["active"] else p["subtitle"]
-        if p["active"] and not boleh_akses:
-            subtitle = "Tidak ada akses"
+        subtitle = p["subtitle"] if boleh_akses else "Tidak ada akses"
         with cols[i % 3]:
             st.markdown(f"""
             <div style='border:1px solid #ECECEC;border-radius:16px;padding:20px;
                         min-height:120px;margin-bottom:12px;
-                        background:{"#FFFFFF" if card_aktif else "#FAFAFA"};
-                        opacity:{"1" if card_aktif else "0.55"}'>
+                        background:{"#FFFFFF" if boleh_akses else "#FAFAFA"};
+                        opacity:{"1" if boleh_akses else "0.55"}'>
                 <div style='font-size:15px;font-weight:600;color:#111827'>{p["title"]}</div>
                 <div style='font-size:12px;color:#9CA3AF;margin-top:6px'>{subtitle}</div>
             </div>
             """, unsafe_allow_html=True)
-            if card_aktif:
+            if boleh_akses:
                 if st.button("Buka", key=f"open_{p['key']}", use_container_width=True):
                     st.session_state["active_project"] = p["key"]
                     st.rerun()
@@ -2275,6 +2272,38 @@ def render_project_picker():
             st.rerun()
 
 
+def render_coming_soon(proj: dict):
+    """Halaman placeholder untuk proyek yang sudah bisa diakses tapi belum jadi."""
+    with st.sidebar:
+        st.markdown(
+            "<div style='font-size:11px;font-weight:700;color:#B01C2E;"
+            "text-transform:uppercase;letter-spacing:.8px;padding:4px 0 8px'>Akun</div>",
+            unsafe_allow_html=True)
+        if st.button("Ganti Proyek", use_container_width=True, key="switch_project_btn_cs"):
+            st.session_state.pop("active_project", None)
+            st.rerun()
+        if st.button("Keluar", use_container_width=True, key="logout_btn_cs"):
+            for k in ["logged_in","user_nik","user_nama","user_akses","preloaded","active_project"]:
+                st.session_state.pop(k, None)
+            st.rerun()
+
+    st.markdown(f"""
+    <div style='display:flex;flex-direction:column;align-items:center;justify-content:center;
+                min-height:60vh;text-align:center'>
+        <div style='font-size:13px;font-weight:600;color:#9CA3AF;text-transform:uppercase;
+                    letter-spacing:1px;margin-bottom:12px'>{proj["title"]}</div>
+        <div style='font-size:48px;font-weight:800;color:#B01C2E;letter-spacing:-1px'>COMING SOON!</div>
+        <div style='font-size:14px;color:#9CA3AF;margin-top:16px;max-width:420px'>
+            Proyek ini sedang dalam pengembangan. Kamu akan diberi tahu begitu sudah siap digunakan.
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    if st.button("← Kembali ke Pilih Proyek", key="back_to_picker_cs"):
+        st.session_state.pop("active_project", None)
+        st.rerun()
+
+
 def main():
     if not check_login():
         return
@@ -2282,6 +2311,12 @@ def main():
     # Belum pilih proyek → tampilkan halaman pemilihan proyek dulu
     if not st.session_state.get("active_project"):
         render_project_picker()
+        return
+
+    # Proyek dipilih tapi belum benar-benar jadi → tampilkan placeholder Coming Soon
+    _proj = next((p for p in PROJECTS if p["key"] == st.session_state["active_project"]), None)
+    if _proj and not _proj["active"]:
+        render_coming_soon(_proj)
         return
 
     # Preload semua data paralel (sekali, hasilnya di-cache)
