@@ -402,7 +402,7 @@ html, body, [class*="css"]  { font-family: 'Inter', sans-serif; }
 .rbm-table-wrap.scroll-box { max-height: 470px; overflow-y: auto; }
 .rbm-table-wrap.scroll-box .rbm-table thead th { position: sticky; z-index: 2; height: 36px; box-sizing: border-box; }
 .rbm-table-wrap.scroll-box .rbm-table thead tr:first-child th { top: 0; z-index: 3; }
-.rbm-table-wrap.scroll-box .rbm-table thead tr:last-child th  { top: 36px; z-index: 2; }
+.rbm-table-wrap.scroll-box .rbm-table thead tr:last-child:not(:first-child) th  { top: 36px; z-index: 2; }
 
 /* ── Tabel detail per Kode Customer — kolom beku (freeze) ─── */
 .cust-table-wrap {
@@ -415,7 +415,7 @@ html, body, [class*="css"]  { font-family: 'Inter', sans-serif; }
 }
 .cust-table thead th { position: sticky; z-index: 2; height: 36px; box-sizing: border-box; }
 .cust-table thead tr:first-child th { top: 0; z-index: 3; }
-.cust-table thead tr:last-child th  { top: 36px; z-index: 2; }
+.cust-table thead tr:last-child:not(:first-child) th  { top: 36px; z-index: 2; }
 .cust-table thead th.cust-frz { z-index: 4; }
 .cust-table thead tr:first-child th.cust-frz { z-index: 5; }
 .cust-table { width: 100%; min-width: 1410px; table-layout: fixed; border-collapse: collapse; font-size: 12.5px; }
@@ -1119,15 +1119,19 @@ def render_sampling_eo_detail_table(dff):
 
 
 # ── Split-table Detail Faktur GT — freeze #, Nama Area, RBM, Kode Customer, Nama Toko ──
-def render_gt_detail_faktur_split(tbl):
-    frz_cols   = [c for c in ["#","Nama Area","RBM","Kode Customer","Nama Toko"] if c in tbl.columns]
+def render_detail_faktur_split(tbl, frz_cols=None):
+    if frz_cols is None:
+        frz_cols = ["#","Nama Area","RBM","Kode Customer","Nama Toko"]
+    frz_cols   = [c for c in frz_cols if c in tbl.columns]
     scroll_cols = [c for c in tbl.columns if c not in frz_cols]
 
-    frz_widths = {"#":46,"Nama Area":150,"RBM":150,"Kode Customer":120,"Nama Toko":180}
+    frz_widths = {"#":46,"No":46,"Nama Area":150,"RBM":150,"Kode Customer":120,"Nama Toko":180,
+                  "No Faktur":130}
     scr_widths = {"No Faktur":120,"Tanggal Faktur":110,"Tanggal JT":110,"Nilai Faktur":110,"Sisa AR":110,
                   "Kelompok":90,"Grouping OS":150,"NO PO":120,"NO SURAT JALAN":150,"KRONOLOGI":200,
                   "ACTION PLAN":200,"DEADLINE":110,"PJ/PIC":110,"NO BA":110,"JENIS BA":120,
-                  "JENIS KASUS":150,"PELAKU":120,"PENYELESAIAN":200}
+                  "JENIS KASUS":150,"PELAKU":120,"PENYELESAIAN":200,
+                  "Kategori SO":140,"OVERDUE (Kelompok)":140,"KET":180}
 
     frz_w = [frz_widths.get(c,120) for c in frz_cols]
     scr_w = [scr_widths.get(c,130) for c in scroll_cols]
@@ -1524,7 +1528,7 @@ def page_otc(filters=None):
     tbl = tbl[[c for c in DISPLAY_ORDER if c in tbl.columns]]
     tbl.insert(0,"No",range(1,len(tbl)+1))
     with st.expander(f"Tampilkan {D(len(tbl))} baris · OS Total: {M(tn)}",expanded=False):
-        st.dataframe(tbl,use_container_width=True,hide_index=True,height=440)
+        render_detail_faktur_split(tbl, frz_cols=["No","Nama Area","RBM","Kode Customer","Nama Toko","No Faktur"])
         dl_btn(dff[cols_ok],"OS_MTI_NKA_DETAIL","Download Detail Faktur")
 
 
@@ -1777,7 +1781,7 @@ def page_gt(filters=None):
     tbl.rename(columns={"Nominal":"Sisa AR","KELOMPOK":"Kelompok"},inplace=True)
     tbl.insert(0,"#",range(1,len(tbl)+1))
     with st.expander(f"Tampilkan {D(len(tbl))} baris · OS Total: {M(tn)}",expanded=False):
-        render_gt_detail_faktur_split(tbl)
+        render_detail_faktur_split(tbl, frz_cols=["#","Nama Area","RBM","Kode Customer","Nama Toko"])
         dl_btn(dff[cols_ok],"GT_DETAIL","Download Detail Faktur GT")
 
 # ════════════════════════════════════════════════════════════════════
