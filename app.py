@@ -2243,11 +2243,10 @@ def render_project_picker():
     nama = st.session_state.get("user_nama", "")
 
     st.markdown(f"""
-    <img src="data:image/png;base64,{LOGO_B64}"
-         style="position:fixed !important; top:50% !important; left:50% !important;
-                transform:translate(-50%,-50%) !important; width:1800px !important;
-                max-width:98vw !important; height:auto !important; opacity:0.09 !important;
-                z-index:0 !important; pointer-events:none !important;">
+    <div style="text-align:center; margin-top:10px;">
+        <img src="data:image/png;base64,{LOGO_B64}"
+             style="width:520px; max-width:80vw; height:auto; opacity:0.12;">
+    </div>
     """, unsafe_allow_html=True)
 
     st.markdown("""
