@@ -2246,13 +2246,14 @@ def render_project_picker():
     <style>
     .pp-logo-bg {{
         position: fixed;
-        top: -50px;
-        right: -40px;
-        width: 340px;
-        opacity: 0.07;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 900px;
+        max-width: 90vw;
+        opacity: 0.06;
         z-index: 0;
         pointer-events: none;
-        filter: grayscale(0%);
     }}
     </style>
     <img class="pp-logo-bg" src="data:image/png;base64,{LOGO_B64}">
@@ -2261,7 +2262,7 @@ def render_project_picker():
     st.markdown("""
     <style>
     .pp-header { display:flex; align-items:flex-start; justify-content:space-between;
-                 margin-bottom:8px; padding-top:4px; }
+                 margin-bottom:8px; padding-top:4px; position:relative; z-index:1; }
     .pp-greet { font-size:15px; color:#6B7280; font-weight:500; line-height:1.3; }
     .pp-greet b { color:#111827; font-weight:700; }
     .pp-title { font-size:30px; font-weight:800; color:#111827; margin-top:2px; }
@@ -2269,7 +2270,8 @@ def render_project_picker():
                display:flex; align-items:center; justify-content:center; flex-shrink:0; }
     .pp-card { border:1px solid #ECECEC; border-radius:18px; padding:22px 22px 18px;
                margin-bottom:14px; background:#FFFFFF; box-shadow:0 2px 8px rgba(0,0,0,0.05);
-               height:190px; display:flex; flex-direction:column; justify-content:space-between; }
+               height:190px; display:flex; flex-direction:column; justify-content:space-between;
+               position:relative; z-index:1; }
     .pp-card.pp-disabled { background:#FAFAFA; opacity:0.7; }
     .pp-icon { width:56px; height:56px; border-radius:16px; display:flex; align-items:center;
                justify-content:center; font-size:26px; margin-bottom:14px;
