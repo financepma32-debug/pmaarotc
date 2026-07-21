@@ -545,7 +545,7 @@ OTC_ALL_COLS = [
     "91-120 DAYS","121+ DAYS","<2026",
     "KELOMPOK2","OVERDUE","TANGGAL HARI INII","batas 2025","OVERDUE?",
     "ACTUAL PELUNASAN","TARGET PELUNASAN","DUE DATE","Qty Faktur Gantung",
-    "Kode Customer","PJ/PIC","DEADLINE","KET",
+    "Kode Customer","PIC","Deadline","KET",
 ]
 
 # GT — kolom dari gt_to_master.py
@@ -1500,7 +1500,7 @@ def page_otc(filters=None):
     ovrd_ct=int((dff["OVERDUE?"]>0).sum())
     sec(f"DETAIL FAKTUR — {D(ovrd_ct)} FAKTUR OVERDUE")
     COLS=["NAMA AREA","RBM","Kode Customer","NAMA TOKO","No Faktur","Tanggal Faktur","Tanggal JT",
-          "Nilai Faktur","NOMINAL","KELOMPOK","GROUPING OS","Action Plan","DEADLINE","PJ/PIC","KET"]
+          "Nilai Faktur","NOMINAL","KELOMPOK","GROUPING OS","Action Plan","Deadline","PIC","KET"]
     cols_ok=[c for c in COLS if c in dff.columns]
     tbl=dff[cols_ok].copy()
     tbl["Kategori SO"] = dff["KELOMPOK"].map({
@@ -1513,7 +1513,8 @@ def page_otc(filters=None):
     for c in ["Nilai Faktur","NOMINAL"]:
         if c in tbl.columns: tbl[c]=tbl[c].apply(R)
     tbl.rename(columns={"NAMA AREA":"Nama Area","NAMA TOKO":"Nama Toko","NOMINAL":"Sisa AR",
-                         "KELOMPOK":"OVERDUE (Kelompok)","GROUPING OS":"Grouping OS"},inplace=True)
+                         "KELOMPOK":"OVERDUE (Kelompok)","GROUPING OS":"Grouping OS",
+                         "PIC":"PJ/PIC","Deadline":"DEADLINE"},inplace=True)
     DISPLAY_ORDER=["Nama Area","RBM","Kode Customer","Nama Toko","No Faktur","Tanggal Faktur","Tanggal JT",
                    "Nilai Faktur","Sisa AR","Kategori SO","OVERDUE (Kelompok)","Grouping OS","Action Plan",
                    "DEADLINE","PJ/PIC","KET"]
