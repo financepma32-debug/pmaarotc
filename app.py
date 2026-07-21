@@ -402,7 +402,8 @@ html, body, [class*="css"]  { font-family: 'Inter', sans-serif; }
 .rbm-table-wrap.scroll-box { max-height: 470px; overflow-y: auto; }
 .rbm-table-wrap.scroll-box .rbm-table thead th { position: sticky; z-index: 2; height: 36px; box-sizing: border-box; }
 .rbm-table-wrap.scroll-box .rbm-table thead tr:first-child th { top: 0; z-index: 3; }
-.rbm-table-wrap.scroll-box .rbm-table thead tr:last-child:not(:first-child) th  { top: 36px; z-index: 2; }
+.rbm-table-wrap.scroll-box .rbm-table thead tr:last-child th  { top: 36px; z-index: 2; }
+.rbm-table-wrap.scroll-box .rbm-table thead tr:only-child th  { top: 0; z-index: 3; }
 
 /* ── Tabel detail per Kode Customer — kolom beku (freeze) ─── */
 .cust-table-wrap {
@@ -415,9 +416,10 @@ html, body, [class*="css"]  { font-family: 'Inter', sans-serif; }
 }
 .cust-table thead th { position: sticky; z-index: 2; height: 36px; box-sizing: border-box; }
 .cust-table thead tr:first-child th { top: 0; z-index: 3; }
-.cust-table thead tr:last-child:not(:first-child) th  { top: 36px; z-index: 2; }
-.cust-table thead th.cust-frz { z-index: 4; }
-.cust-table thead tr:first-child th.cust-frz { z-index: 5; }
+.cust-table thead tr:last-child th  { top: 36px; z-index: 2; }
+.cust-table thead tr:only-child th  { top: 0; z-index: 3; }
+.cust-table thead th.cust-frz { z-index: 5; }
+.cust-table thead tr:first-child th.cust-frz { z-index: 6; }
 .cust-table { width: 100%; min-width: 1410px; table-layout: fixed; border-collapse: collapse; font-size: 12.5px; }
 .cust-table th, .cust-table td {
     padding: 9px 12px;
@@ -2042,12 +2044,12 @@ def preload_all():
 # ═══════════════════════════════════════════════════════════════
 # AUTH — Login dengan NIK + Password
 # ═══════════════════════════════════════════════════════════════
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=300, show_spinner=False)
 def load_users() -> dict:
     """Ambil daftar user dari tabel app_users di Supabase."""
     try:
         sb   = get_sb()
-        resp = sb.table("app_users").select("nik,nama,password").execute()
+        resp = sb.table("app_users").select("nik,nama,password,akses_proyek").execute()
         return {r["nik"]: r for r in (resp.data or [])}
     except Exception:
         return {}
@@ -2139,9 +2141,15 @@ def check_login() -> bool:
                                 unsafe_allow_html=True)
                 else:
                     user = users[nik.strip()]
+                    akses_raw = (user.get("akses_proyek") or "").strip()
+                    if akses_raw.upper() == "ALL":
+                        akses = "ALL"
+                    else:
+                        akses = [a.strip() for a in akses_raw.split(",") if a.strip()]
                     st.session_state["logged_in"]   = True
                     st.session_state["user_nik"]    = nik.strip()
                     st.session_state["user_nama"]   = user["nama"]
+                    st.session_state["user_akses"]  = akses
                     st.rerun()
 
     return False
@@ -2186,15 +2194,134 @@ def render_change_password():
                     # Otomatis logout setelah 2 detik agar user login dengan password baru
                     import time as _time
                     _time.sleep(1.5)
-                    for k in ["logged_in","user_nik","user_nama"]:
+                    for k in ["logged_in","user_nik","user_nama","user_akses"]:
                         st.session_state.pop(k, None)
                     st.rerun()
                 except Exception as e:
                     st.error(f"Gagal menyimpan: {e}")
 
 
+PROJECTS = [
+    {
+        "key": "fad_arotc",
+        "title": "AR Outstanding",
+        "subtitle": "Channel MT, GT, RDI",
+        "active": True,
+    },
+    {
+        "key": "proyek_b",
+        "title": "Proyek B",
+        "subtitle": "COMING SOON!",
+        "active": False,
+    },
+    {
+        "key": "proyek_c",
+        "title": "Proyek C",
+        "subtitle": "COMING SOON!",
+        "active": False,
+    },
+]
+
+
+def render_project_picker():
+    """Halaman pilih proyek — tampil setelah login, sebelum masuk ke dashboard."""
+    nama = st.session_state.get("user_nama", "")
+    st.markdown(f"""
+    <div style='padding:8px 0 4px'>
+        <div style='font-size:20px;font-weight:700;color:#111827'>Pilih Proyek</div>
+        <div style='font-size:13px;color:#9CA3AF;margin-top:2px'>Halo {nama}, silakan pilih proyek yang mau dibuka.</div>
+    </div>
+    <hr style='margin:16px 0 24px;border-color:#ECECEC'>
+    """, unsafe_allow_html=True)
+
+    cols = st.columns(3)
+    akses = st.session_state.get("user_akses", [])
+    for i, p in enumerate(PROJECTS):
+        boleh_akses = (akses == "ALL") or (p["key"] in akses)
+        subtitle = p["subtitle"] if boleh_akses else "Tidak ada akses"
+        with cols[i % 3]:
+            st.markdown(f"""
+            <div style='border:1px solid #ECECEC;border-radius:16px;padding:20px;
+                        min-height:120px;margin-bottom:12px;
+                        background:{"#FFFFFF" if boleh_akses else "#FAFAFA"};
+                        opacity:{"1" if boleh_akses else "0.55"}'>
+                <div style='font-size:15px;font-weight:600;color:#111827'>{p["title"]}</div>
+                <div style='font-size:12px;color:#9CA3AF;margin-top:6px'>{subtitle}</div>
+            </div>
+            """, unsafe_allow_html=True)
+            if boleh_akses:
+                if st.button("Buka", key=f"open_{p['key']}", use_container_width=True):
+                    st.session_state["active_project"] = p["key"]
+                    st.rerun()
+            else:
+                st.button("Buka", key=f"open_{p['key']}", use_container_width=True, disabled=True)
+
+    with st.sidebar:
+        st.markdown(
+            "<div style='font-size:11px;font-weight:700;color:#B01C2E;"
+            "text-transform:uppercase;letter-spacing:.8px;padding:4px 0 8px'>Akun</div>",
+            unsafe_allow_html=True)
+        if st.button("Refresh Akses", use_container_width=True, key="refresh_akses_picker"):
+            load_users.clear()
+            # muat ulang data akses user yang sedang login, tanpa perlu login ulang
+            users = load_users()
+            u = users.get(st.session_state.get("user_nik"))
+            if u:
+                akses_raw = (u.get("akses_proyek") or "").strip()
+                st.session_state["user_akses"] = "ALL" if akses_raw.upper()=="ALL" else \
+                    [a.strip() for a in akses_raw.split(",") if a.strip()]
+            st.rerun()
+        if st.button("Keluar", use_container_width=True, key="logout_btn_picker"):
+            for k in ["logged_in","user_nik","user_nama","user_akses","preloaded","active_project"]:
+                st.session_state.pop(k, None)
+            st.rerun()
+
+
+def render_coming_soon(proj: dict):
+    """Halaman placeholder untuk proyek yang sudah bisa diakses tapi belum jadi."""
+    with st.sidebar:
+        st.markdown(
+            "<div style='font-size:11px;font-weight:700;color:#B01C2E;"
+            "text-transform:uppercase;letter-spacing:.8px;padding:4px 0 8px'>Akun</div>",
+            unsafe_allow_html=True)
+        if st.button("Ganti Proyek", use_container_width=True, key="switch_project_btn_cs"):
+            st.session_state.pop("active_project", None)
+            st.rerun()
+        if st.button("Keluar", use_container_width=True, key="logout_btn_cs"):
+            for k in ["logged_in","user_nik","user_nama","user_akses","preloaded","active_project"]:
+                st.session_state.pop(k, None)
+            st.rerun()
+
+    st.markdown(f"""
+    <div style='display:flex;flex-direction:column;align-items:center;justify-content:center;
+                min-height:60vh;text-align:center'>
+        <div style='font-size:13px;font-weight:600;color:#9CA3AF;text-transform:uppercase;
+                    letter-spacing:1px;margin-bottom:12px'>{proj["title"]}</div>
+        <div style='font-size:48px;font-weight:800;color:#B01C2E;letter-spacing:-1px'>COMING SOON!</div>
+        <div style='font-size:14px;color:#9CA3AF;margin-top:16px;max-width:420px'>
+            Proyek ini sedang dalam pengembangan. Kamu akan diberi tahu begitu sudah siap digunakan.
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    if st.button("← Kembali ke Pilih Proyek", key="back_to_picker_cs"):
+        st.session_state.pop("active_project", None)
+        st.rerun()
+
+
 def main():
     if not check_login():
+        return
+
+    # Belum pilih proyek → tampilkan halaman pemilihan proyek dulu
+    if not st.session_state.get("active_project"):
+        render_project_picker()
+        return
+
+    # Proyek dipilih tapi belum benar-benar jadi → tampilkan placeholder Coming Soon
+    _proj = next((p for p in PROJECTS if p["key"] == st.session_state["active_project"]), None)
+    if _proj and not _proj["active"]:
+        render_coming_soon(_proj)
         return
 
     # Preload semua data paralel (sekali, hasilnya di-cache)
@@ -2219,10 +2346,16 @@ def main():
             f"</div>",
             unsafe_allow_html=True,
         )
-        if st.button("Keluar", use_container_width=True, key="logout_btn"):
-            for k in ["logged_in","user_nik","user_nama","preloaded"]:
-                st.session_state.pop(k, None)
-            st.rerun()
+        c_gp, c_out = st.columns(2)
+        with c_gp:
+            if st.button("Ganti Proyek", use_container_width=True, key="switch_project_btn"):
+                st.session_state.pop("active_project", None)
+                st.rerun()
+        with c_out:
+            if st.button("Keluar", use_container_width=True, key="logout_btn"):
+                for k in ["logged_in","user_nik","user_nama","user_akses","preloaded","active_project"]:
+                    st.session_state.pop(k, None)
+                st.rerun()
         st.markdown("<hr style='margin:8px 0;border-color:#ECECEC'>", unsafe_allow_html=True)
 
     render_change_password()
