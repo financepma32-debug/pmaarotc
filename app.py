@@ -2039,7 +2039,7 @@ def preload_all():
 # ═══════════════════════════════════════════════════════════════
 # AUTH — Login dengan NIK + Password
 # ═══════════════════════════════════════════════════════════════
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=300, show_spinner=False)
 def load_users() -> dict:
     """Ambil daftar user dari tabel app_users di Supabase."""
     try:
@@ -2259,6 +2259,16 @@ def render_project_picker():
             "<div style='font-size:11px;font-weight:700;color:#B01C2E;"
             "text-transform:uppercase;letter-spacing:.8px;padding:4px 0 8px'>Akun</div>",
             unsafe_allow_html=True)
+        if st.button("Refresh Akses", use_container_width=True, key="refresh_akses_picker"):
+            load_users.clear()
+            # muat ulang data akses user yang sedang login, tanpa perlu login ulang
+            users = load_users()
+            u = users.get(st.session_state.get("user_nik"))
+            if u:
+                akses_raw = (u.get("akses_proyek") or "").strip()
+                st.session_state["user_akses"] = "ALL" if akses_raw.upper()=="ALL" else \
+                    [a.strip() for a in akses_raw.split(",") if a.strip()]
+            st.rerun()
         if st.button("Keluar", use_container_width=True, key="logout_btn_picker"):
             for k in ["logged_in","user_nik","user_nama","user_akses","preloaded","active_project"]:
                 st.session_state.pop(k, None)
