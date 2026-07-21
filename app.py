@@ -2193,20 +2193,20 @@ def render_change_password():
 PROJECTS = [
     {
         "key": "fad_arotc",
-        "title": "AR OTC + AR GT Dashboard",
-        "subtitle": "FAD Team — Channel MT, GT, RDI",
+        "title": "AR Outstanding",
+        "subtitle": "Channel MT, GT, RDI",
         "active": True,
     },
     {
         "key": "proyek_b",
         "title": "Proyek B",
-        "subtitle": "Segera hadir",
+        "subtitle": "COMING SOON!",
         "active": False,
     },
     {
         "key": "proyek_c",
         "title": "Proyek C",
-        "subtitle": "Segera hadir",
+        "subtitle": "COMING SOON!",
         "active": False,
     },
 ]
