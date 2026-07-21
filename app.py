@@ -2190,8 +2190,76 @@ def render_change_password():
                     st.error(f"Gagal menyimpan: {e}")
 
 
+PROJECTS = [
+    {
+        "key": "fad_arotc",
+        "title": "AR OTC + AR GT Dashboard",
+        "subtitle": "FAD Team — Channel MT, GT, RDI",
+        "active": True,
+    },
+    {
+        "key": "proyek_b",
+        "title": "Proyek B",
+        "subtitle": "Segera hadir",
+        "active": False,
+    },
+    {
+        "key": "proyek_c",
+        "title": "Proyek C",
+        "subtitle": "Segera hadir",
+        "active": False,
+    },
+]
+
+
+def render_project_picker():
+    """Halaman pilih proyek — tampil setelah login, sebelum masuk ke dashboard."""
+    nama = st.session_state.get("user_nama", "")
+    st.markdown(f"""
+    <div style='padding:8px 0 4px'>
+        <div style='font-size:20px;font-weight:700;color:#111827'>Pilih Proyek</div>
+        <div style='font-size:13px;color:#9CA3AF;margin-top:2px'>Halo {nama}, silakan pilih proyek yang mau dibuka.</div>
+    </div>
+    <hr style='margin:16px 0 24px;border-color:#ECECEC'>
+    """, unsafe_allow_html=True)
+
+    cols = st.columns(3)
+    for i, p in enumerate(PROJECTS):
+        with cols[i % 3]:
+            st.markdown(f"""
+            <div style='border:1px solid #ECECEC;border-radius:16px;padding:20px;
+                        min-height:120px;margin-bottom:12px;
+                        background:{"#FFFFFF" if p["active"] else "#FAFAFA"};
+                        opacity:{"1" if p["active"] else "0.55"}'>
+                <div style='font-size:15px;font-weight:600;color:#111827'>{p["title"]}</div>
+                <div style='font-size:12px;color:#9CA3AF;margin-top:6px'>{p["subtitle"]}</div>
+            </div>
+            """, unsafe_allow_html=True)
+            if p["active"]:
+                if st.button("Buka", key=f"open_{p['key']}", use_container_width=True):
+                    st.session_state["active_project"] = p["key"]
+                    st.rerun()
+            else:
+                st.button("Buka", key=f"open_{p['key']}", use_container_width=True, disabled=True)
+
+    with st.sidebar:
+        st.markdown(
+            "<div style='font-size:11px;font-weight:700;color:#B01C2E;"
+            "text-transform:uppercase;letter-spacing:.8px;padding:4px 0 8px'>Akun</div>",
+            unsafe_allow_html=True)
+        if st.button("Keluar", use_container_width=True, key="logout_btn_picker"):
+            for k in ["logged_in","user_nik","user_nama","preloaded","active_project"]:
+                st.session_state.pop(k, None)
+            st.rerun()
+
+
 def main():
     if not check_login():
+        return
+
+    # Belum pilih proyek → tampilkan halaman pemilihan proyek dulu
+    if not st.session_state.get("active_project"):
+        render_project_picker()
         return
 
     # Preload semua data paralel (sekali, hasilnya di-cache)
@@ -2216,10 +2284,16 @@ def main():
             f"</div>",
             unsafe_allow_html=True,
         )
-        if st.button("Keluar", use_container_width=True, key="logout_btn"):
-            for k in ["logged_in","user_nik","user_nama","preloaded"]:
-                st.session_state.pop(k, None)
-            st.rerun()
+        c_gp, c_out = st.columns(2)
+        with c_gp:
+            if st.button("Ganti Proyek", use_container_width=True, key="switch_project_btn"):
+                st.session_state.pop("active_project", None)
+                st.rerun()
+        with c_out:
+            if st.button("Keluar", use_container_width=True, key="logout_btn"):
+                for k in ["logged_in","user_nik","user_nama","preloaded","active_project"]:
+                    st.session_state.pop(k, None)
+                st.rerun()
         st.markdown("<hr style='margin:8px 0;border-color:#ECECEC'>", unsafe_allow_html=True)
 
     render_change_password()
