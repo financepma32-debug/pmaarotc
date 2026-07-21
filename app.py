@@ -1764,7 +1764,7 @@ def page_gt(filters=None):
     sec(f"DETAIL FAKTUR — {D(ovrd_ct)} FAKTUR OVERDUE")
     COLS=["Nama Area","RBM","Kode Customer","Nama Toko","No Faktur","Tanggal Faktur","Tanggal JT",
           "Nilai Faktur","Nominal","KELOMPOK","Grouping OS","NO PO","NO SURAT JALAN","KRONOLOGI",
-          "ACTION PLAN","DEADLINE","PJ/PIC","NO BA","JENIS BA","JENIS KASUS","PELAKU","PENYELESAIAN"]
+          "ACTION PLAN","DEADLINE","NO BA","JENIS BA","JENIS KASUS","PELAKU","PENYELESAIAN"]
     cols_ok=[c for c in COLS if c in dff.columns]
     tbl=dff[cols_ok].copy()
     if "Tanggal Faktur" in tbl.columns: tbl["Tanggal Faktur"]=tbl["Tanggal Faktur"].dt.strftime("%d %b %Y")
