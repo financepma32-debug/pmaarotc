@@ -2243,9 +2243,15 @@ def render_project_picker():
     nama = st.session_state.get("user_nama", "")
 
     st.markdown(f"""
-    <div style="text-align:center; margin-top:10px;">
+    <div style="text-align:center; margin-bottom:20px; padding:28px 20px;
+                border-radius:20px; height:150px; display:flex; align-items:center;
+                justify-content:center; overflow:hidden; position:relative;
+                background:linear-gradient(135deg,#B01C2E 0%,#7A1420 100%);">
         <img src="data:image/png;base64,{LOGO_B64}"
-             style="width:520px; max-width:80vw; height:auto; opacity:0.12;">
+             style="width:380px; max-width:70vw; height:auto; opacity:0.9;
+                    filter:brightness(0) invert(1); opacity:0.16;">
+        <div style="position:absolute; color:#FFFFFF; font-size:15px; font-weight:600;
+                    letter-spacing:1px; opacity:0.9;">PT. PINUS MERAH ABADI</div>
     </div>
     """, unsafe_allow_html=True)
 
