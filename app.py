@@ -2296,18 +2296,19 @@ def render_project_picker():
         icon_bg = PROJECT_ICON_BG.get(p["key"], "#F3F4F6")
         wip_badge = "" if p["active"] else '<span class="pp-badge-wip">Work in Progress</span>'
         with cols[i % 3]:
-            st.markdown(f"""
-            <div class="pp-card {'' if boleh_akses else 'pp-disabled'}">
-                <div>
-                    <div class="pp-icon" style="background:{icon_bg}">{icon}</div>
-                    <div class="pp-card-title-row">
-                        <span class="pp-card-title">{p["title"]}</span>
-                        {wip_badge}
-                    </div>
-                    <div class="pp-card-subtitle">{subtitle}</div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+            card_html = (
+                f'<div class="pp-card {"" if boleh_akses else "pp-disabled"}">'
+                f'<div>'
+                f'<div class="pp-icon" style="background:{icon_bg}">{icon}</div>'
+                f'<div class="pp-card-title-row">'
+                f'<span class="pp-card-title">{p["title"]}</span>'
+                f'{wip_badge}'
+                f'</div>'
+                f'<div class="pp-card-subtitle">{subtitle}</div>'
+                f'</div>'
+                f'</div>'
+            )
+            st.markdown(card_html, unsafe_allow_html=True)
             btn_label = "Go to Dashboard" if p["active"] else "Buka"
             if boleh_akses:
                 if st.button(btn_label, key=f"open_{p['key']}", use_container_width=True):
