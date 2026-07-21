@@ -2243,12 +2243,12 @@ def render_project_picker():
     nama = st.session_state.get("user_nama", "")
 
     st.markdown(f"""
-    <div style="text-align:center; margin-bottom:20px; padding:28px 20px;
-                border-radius:20px; height:150px; display:flex; align-items:center;
+    <div style="text-align:center; margin-bottom:20px; padding:20px;
+                border-radius:20px; height:230px; display:flex; align-items:center;
                 justify-content:center; overflow:hidden; position:relative;
                 background:linear-gradient(135deg,#B01C2E 0%,#7A1420 100%);">
         <img src="data:image/png;base64,{LOGO_B64}"
-             style="height:110px; width:auto; opacity:0.9;
+             style="height:210px; width:auto; opacity:0.95;
                     filter:brightness(0) invert(1);">
     </div>
     """, unsafe_allow_html=True)
