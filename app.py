@@ -2245,15 +2245,16 @@ def render_project_picker():
     st.markdown(f"""
     <style>
     .pp-logo-bg {{
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: 900px;
-        max-width: 90vw;
-        opacity: 0.06;
-        z-index: 0;
-        pointer-events: none;
+        position: fixed !important;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        width: 1200px !important;
+        max-width: 95vw !important;
+        height: auto !important;
+        opacity: 0.07 !important;
+        z-index: 0 !important;
+        pointer-events: none !important;
     }}
     </style>
     <img class="pp-logo-bg" src="data:image/png;base64,{LOGO_B64}">
