@@ -2223,38 +2223,98 @@ PROJECTS = [
 ]
 
 
+PROJECT_ICONS = {
+    "fad_arotc": "📈",
+    "proyek_b":  "🛠️",
+    "proyek_c":  "📐",
+}
+PROJECT_ICON_BG = {
+    "fad_arotc": "linear-gradient(135deg,#EDE9FE,#DBEAFE)",
+    "proyek_b":  "linear-gradient(135deg,#FEF3C7,#FDE68A)",
+    "proyek_c":  "linear-gradient(135deg,#DBEAFE,#BFDBFE)",
+}
+
+
 def render_project_picker():
     """Halaman pilih proyek — tampil setelah login, sebelum masuk ke dashboard."""
     nama = st.session_state.get("user_nama", "")
-    st.markdown(f"""
-    <div style='padding:8px 0 4px'>
-        <div style='font-size:20px;font-weight:700;color:#111827'>Pilih Proyek</div>
-        <div style='font-size:13px;color:#9CA3AF;margin-top:2px'>Halo {nama}, silakan pilih proyek yang mau dibuka.</div>
+
+    st.markdown("""
+    <style>
+    .pp-header { display:flex; align-items:flex-start; justify-content:space-between;
+                 margin-bottom:8px; padding-top:4px; }
+    .pp-greet { font-size:15px; color:#6B7280; font-weight:500; line-height:1.3; }
+    .pp-greet b { color:#111827; font-weight:700; }
+    .pp-title { font-size:30px; font-weight:800; color:#111827; margin-top:2px; }
+    .pp-bell { font-size:20px; background:#F3F4F6; border-radius:50%; width:44px; height:44px;
+               display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .pp-card { border:1px solid #ECECEC; border-radius:18px; padding:22px 22px 18px;
+               margin-bottom:14px; background:#FFFFFF; box-shadow:0 2px 8px rgba(0,0,0,0.05);
+               height:190px; display:flex; flex-direction:column; justify-content:space-between; }
+    .pp-card.pp-disabled { background:#FAFAFA; opacity:0.7; }
+    .pp-icon { width:56px; height:56px; border-radius:16px; display:flex; align-items:center;
+               justify-content:center; font-size:26px; margin-bottom:14px;
+               box-shadow: inset 0 0 0 1px rgba(0,0,0,0.03); }
+    .pp-card-title-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .pp-card-title { font-size:16.5px; font-weight:700; color:#111827; }
+    .pp-badge-wip { font-size:10px; font-weight:700; color:#B01C2E; background:#FCE8EA;
+                    padding:3px 9px; border-radius:999px; white-space:nowrap; }
+    .pp-card-subtitle { font-size:12.5px; color:#9CA3AF; margin-top:4px; }
+    .stButton > button {
+        background: linear-gradient(135deg,#B01C2E,#E0293D) !important;
+        color: #FFFFFF !important;
+        border: none !important;
+        border-radius: 999px !important;
+        font-weight: 600 !important;
+        font-size: 14px !important;
+        padding: 10px 0 !important;
+        box-shadow: 0 4px 10px rgba(176,28,46,0.28) !important;
+    }
+    .stButton > button:disabled {
+        background: #D1D5DB !important;
+        color: #9CA3AF !important;
+        box-shadow: none !important;
+        opacity: 1 !important;
+    }
+    </style>
+    <div class="pp-header">
+        <div>
+            <div class="pp-greet">Halo, <b>""" + nama + """!</b></div>
+            <div class="pp-title">Pilih Proyek</div>
+        </div>
+        <div class="pp-bell">🔔</div>
     </div>
-    <hr style='margin:16px 0 24px;border-color:#ECECEC'>
+    <hr style='margin:8px 0 22px;border-color:#ECECEC'>
     """, unsafe_allow_html=True)
 
-    cols = st.columns(3)
     akses = st.session_state.get("user_akses", [])
+    cols = st.columns(3)
     for i, p in enumerate(PROJECTS):
         boleh_akses = (akses == "ALL") or (p["key"] in akses)
         subtitle = p["subtitle"] if boleh_akses else "Tidak ada akses"
+        icon = PROJECT_ICONS.get(p["key"], "📁")
+        icon_bg = PROJECT_ICON_BG.get(p["key"], "#F3F4F6")
+        wip_badge = "" if p["active"] else '<span class="pp-badge-wip">Work in Progress</span>'
         with cols[i % 3]:
             st.markdown(f"""
-            <div style='border:1px solid #ECECEC;border-radius:16px;padding:20px;
-                        min-height:120px;margin-bottom:12px;
-                        background:{"#FFFFFF" if boleh_akses else "#FAFAFA"};
-                        opacity:{"1" if boleh_akses else "0.55"}'>
-                <div style='font-size:15px;font-weight:600;color:#111827'>{p["title"]}</div>
-                <div style='font-size:12px;color:#9CA3AF;margin-top:6px'>{subtitle}</div>
+            <div class="pp-card {'' if boleh_akses else 'pp-disabled'}">
+                <div>
+                    <div class="pp-icon" style="background:{icon_bg}">{icon}</div>
+                    <div class="pp-card-title-row">
+                        <span class="pp-card-title">{p["title"]}</span>
+                        {wip_badge}
+                    </div>
+                    <div class="pp-card-subtitle">{subtitle}</div>
+                </div>
             </div>
             """, unsafe_allow_html=True)
+            btn_label = "Go to Dashboard" if p["active"] else "Buka"
             if boleh_akses:
-                if st.button("Buka", key=f"open_{p['key']}", use_container_width=True):
+                if st.button(btn_label, key=f"open_{p['key']}", use_container_width=True):
                     st.session_state["active_project"] = p["key"]
                     st.rerun()
             else:
-                st.button("Buka", key=f"open_{p['key']}", use_container_width=True, disabled=True)
+                st.button(btn_label, key=f"open_{p['key']}", use_container_width=True, disabled=True)
 
     with st.sidebar:
         st.markdown(
