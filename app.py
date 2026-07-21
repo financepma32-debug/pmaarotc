@@ -2248,10 +2248,8 @@ def render_project_picker():
                 justify-content:center; overflow:hidden; position:relative;
                 background:linear-gradient(135deg,#B01C2E 0%,#7A1420 100%);">
         <img src="data:image/png;base64,{LOGO_B64}"
-             style="width:380px; max-width:70vw; height:auto; opacity:0.9;
-                    filter:brightness(0) invert(1); opacity:0.16;">
-        <div style="position:absolute; color:#FFFFFF; font-size:15px; font-weight:600;
-                    letter-spacing:1px; opacity:0.9;">PT. PINUS MERAH ABADI</div>
+             style="height:110px; width:auto; opacity:0.9;
+                    filter:brightness(0) invert(1);">
     </div>
     """, unsafe_allow_html=True)
 
